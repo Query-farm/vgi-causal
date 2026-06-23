@@ -168,9 +168,7 @@ def _binary_treatment(df: pd.DataFrame, column: str) -> np.ndarray:
     return values.astype(int)
 
 
-def _covariate_matrix(
-    df: pd.DataFrame, covariates: list[str]
-) -> np.ndarray:
+def _covariate_matrix(df: pd.DataFrame, covariates: list[str]) -> np.ndarray:
     """Build the float64 design matrix ``X`` from the covariate columns.
 
     Args:
@@ -194,9 +192,7 @@ def _covariate_matrix(
     return np.column_stack(cols)
 
 
-def _fit_propensity(
-    x: np.ndarray, treatment: np.ndarray, *, random_state: int
-) -> np.ndarray:
+def _fit_propensity(x: np.ndarray, treatment: np.ndarray, *, random_state: int) -> np.ndarray:
     """Fit a logistic propensity model and return clipped per-row e(X).
 
     Uses L2-regularized logistic regression (lbfgs), which keeps coefficients
@@ -297,9 +293,7 @@ def propensity_scores(
     }
 
 
-def _ipw_ate(
-    y: np.ndarray, t: np.ndarray, e: np.ndarray
-) -> tuple[float, float]:
+def _ipw_ate(y: np.ndarray, t: np.ndarray, e: np.ndarray) -> tuple[float, float]:
     """Stabilized inverse-probability-weighted ATE and its standard error.
 
     Uses the Hajek (self-normalized) estimator: the weighted mean of treated
@@ -493,9 +487,7 @@ def att(
     x = _covariate_matrix(df, covariates)
     _check_both_arms(t)
 
-    def _point(
-        y_s: np.ndarray, t_s: np.ndarray, x_s: np.ndarray
-    ) -> float | None:
+    def _point(y_s: np.ndarray, t_s: np.ndarray, x_s: np.ndarray) -> float | None:
         if t_s.sum() == 0 or (1 - t_s).sum() == 0:
             return None
         e_s = _fit_propensity(x_s, t_s, random_state=random_state)

@@ -1,7 +1,7 @@
 # /// script
 # requires-python = ">=3.13"
 # dependencies = [
-#     "vgi-python",
+#     "vgi-python>=0.8.3",
 #     "scikit-learn>=1.3",
 #     "statsmodels>=0.14",
 #     "scipy",
@@ -9,9 +9,6 @@
 #     "pandas",
 #     "pyarrow",
 # ]
-#
-# [tool.uv.sources]
-# vgi-python = { path = "../vgi-python" }
 # ///
 """Stdio entry shim for the causal VGI worker.
 

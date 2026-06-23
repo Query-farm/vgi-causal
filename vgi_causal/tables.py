@@ -111,10 +111,7 @@ class Ate(SinkBuffer[AteArgs, DrainState]):
         categories = ["causal", "estimator"]
         examples = [
             FunctionExample(
-                sql=(
-                    "SELECT * FROM causal.ate((SELECT * FROM cohort), "
-                    "treatment := 't', outcome := 'y')"
-                ),
+                sql=("SELECT * FROM causal.ate((SELECT * FROM cohort), treatment := 't', outcome := 'y')"),
                 description="ATE by IPW, regression adjustment, and doubly-robust AIPW",
             )
         ]
@@ -213,10 +210,7 @@ class Att(SinkBuffer[AttArgs, DrainState]):
         categories = ["causal", "estimator"]
         examples = [
             FunctionExample(
-                sql=(
-                    "SELECT * FROM causal.att((SELECT * FROM cohort), "
-                    "treatment := 't', outcome := 'y')"
-                ),
+                sql=("SELECT * FROM causal.att((SELECT * FROM cohort), treatment := 't', outcome := 'y')"),
                 description="Average treatment effect on the treated (IPW-ATT)",
             )
         ]

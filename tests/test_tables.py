@@ -23,9 +23,7 @@ def _arrow(df) -> pa.Table:
 
 def test_ate_function_recovers_tau() -> None:
     df = make_confounded()
-    out = run_buffering(
-        Ate, _arrow(df[["t", "y", "x1", "x2"]]), named={"treatment": "t", "outcome": "y"}
-    )
+    out = run_buffering(Ate, _arrow(df[["t", "y", "x1", "x2"]]), named={"treatment": "t", "outcome": "y"})
     d = out.to_pydict()
     assert out.schema.names == ["method", "estimate", "std_error", "ci_lower", "ci_upper"]
     by_method = dict(zip(d["method"], d["estimate"], strict=True))
