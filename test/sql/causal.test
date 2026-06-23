@@ -1,0 +1,114 @@
+# name: test/sql/causal.test
+# description: Causal treatment-effect table functions (ATE, propensity, ATT)
+# group: [vgi_causal]
+
+require-env VGI_CAUSAL_WORKER
+
+statement ok
+LOAD vgi;
+
+statement ok
+ATTACH 'causal' AS causal (TYPE vgi, LOCATION '${VGI_CAUSAL_WORKER}');
+
+# A confounded cohort. The covariate x drives BOTH treatment assignment and the
+# outcome, so a naive difference of means is biased; an adjusted estimator
+# recovers the planted effect tau = 5.
+#
+#   x  = a spread covariate in [-3, 3]
+#   t  = 1 more often when x > 0 (treatment depends on x -> confounding), but a
+#        deterministic (g*7+3) % 10 pattern keeps BOTH arms spanning the whole x
+#        range -> overlap/positivity holds (so ATT/IPW are well-defined).
+#   y  = 5*t + 2*x   (planted ATE = 5, plus a covariate effect)
+#
+# Because y is exactly linear in (t, x) with no noise, regression adjustment and
+# AIPW recover tau = 5 exactly, while E[Y|T=1]-E[Y|T=0] is inflated by the x gap.
+statement ok
+CREATE TEMP TABLE cohort AS
+SELECT
+  g                                  AS id,
+  (g - 30)::DOUBLE / 10.0            AS x,
+  CASE WHEN ((g * 7 + 3) % 10) < (5 + 3 * sign((g - 30)::DOUBLE)) THEN 1 ELSE 0 END AS t,
+  5.0 * (CASE WHEN ((g * 7 + 3) % 10) < (5 + 3 * sign((g - 30)::DOUBLE)) THEN 1 ELSE 0 END)
+    + 2.0 * ((g - 30)::DOUBLE / 10.0) AS y
+FROM generate_series(0, 60) AS s(g);
+
+# Naive difference of means is biased ABOVE the true effect of 5 (treated units
+# have systematically higher x). Sanity-check the planted confounding.
+query I
+SELECT (SELECT avg(y) FROM cohort WHERE t = 1) - (SELECT avg(y) FROM cohort WHERE t = 0) > 6.0;
+----
+true
+
+# Regression adjustment recovers the planted effect tau = 5 (exact, linear DGP).
+query I
+SELECT round(estimate, 2)
+FROM causal.ate((SELECT t, y, x FROM cohort), treatment := 't', outcome := 'y')
+WHERE method = 'regression_adjustment';
+----
+5.0
+
+# The doubly-robust AIPW estimate recovers the planted effect tau = 5 (the
+# linear, noise-free DGP makes it exact up to rounding), and its 95% CI brackets
+# 5 within a small tolerance.
+query I
+SELECT round(estimate, 2)
+FROM causal.ate((SELECT t, y, x FROM cohort), treatment := 't', outcome := 'y')
+WHERE method = 'aipw';
+----
+5.0
+
+query I
+SELECT ci_lower <= 5.0 + 1e-6 AND ci_upper >= 5.0 - 1e-6
+FROM causal.ate((SELECT t, y, x FROM cohort), treatment := 't', outcome := 'y')
+WHERE method = 'aipw';
+----
+true
+
+# Exactly three estimator rows are emitted.
+query I
+SELECT count(*)
+FROM causal.ate((SELECT t, y, x FROM cohort), treatment := 't', outcome := 'y');
+----
+3
+
+# Propensity scores: one row per input row, all valid probabilities in (0,1).
+query I
+SELECT count(*)
+FROM causal.propensity_scores((SELECT id, t, x FROM cohort), treatment := 't', id := 'id')
+WHERE propensity > 0.0 AND propensity < 1.0;
+----
+61
+
+# Treated-likely units (high x) get higher propensity than treated-unlikely
+# units (low x): the max-x row outscores the min-x row.
+query I
+SELECT
+  (SELECT propensity FROM causal.propensity_scores((SELECT id, t, x FROM cohort),
+                                                   treatment := 't', id := 'id') ORDER BY id DESC LIMIT 1)
+  >
+  (SELECT propensity FROM causal.propensity_scores((SELECT id, t, x FROM cohort),
+                                                   treatment := 't', id := 'id') ORDER BY id ASC LIMIT 1);
+----
+true
+
+# ATT: single row near the planted effect of 5.
+query I
+SELECT abs(estimate - 5.0) < 1.0
+FROM causal.att((SELECT t, y, x FROM cohort), treatment := 't', outcome := 'y');
+----
+true
+
+# Missing column -> clear error, never a crash.
+statement error
+SELECT * FROM causal.ate((SELECT t, y, x FROM cohort), treatment := 'nope', outcome := 'y');
+----
+missing required column
+
+# Non-binary treatment -> clear error.
+statement error
+SELECT * FROM causal.ate((SELECT id AS t, y, x FROM cohort), treatment := 't', outcome := 'y');
+----
+binary 0/1
+
+statement ok
+DETACH causal;

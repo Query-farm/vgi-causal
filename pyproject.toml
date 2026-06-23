@@ -1,0 +1,97 @@
+[project]
+name = "vgi-causal"
+version = "0.1.0"
+description = "Causal treatment-effect estimation (ATE, ATT, propensity scores; IPW / regression adjustment / doubly-robust AIPW) for DuckDB via VGI"
+readme = "README.md"
+keywords = [
+    "duckdb",
+    "apache-arrow",
+    "vgi",
+    "sql",
+    "causal-inference",
+    "treatment-effect",
+    "propensity-score",
+    "ipw",
+    "doubly-robust",
+    "aipw",
+    "scikit-learn",
+]
+license = { file = "LICENSE" }
+authors = [{ name = "Query Farm LLC", email = "hello@query.farm" }]
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Database",
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
+]
+requires-python = ">=3.13"
+dependencies = [
+    "vgi-python",
+    "scikit-learn>=1.3",
+    "statsmodels>=0.14",
+    "scipy",
+    "numpy",
+    "pandas",
+    "pyarrow",
+]
+
+[project.optional-dependencies]
+# dowhy is an OPTIONAL doubly-robust backend (Microsoft, MIT). The default
+# estimators run on scikit-learn + statsmodels and need none of this.
+dowhy = ["dowhy>=0.11"]
+dev = [
+    "pytest>=8",
+    "ruff",
+    "mypy",
+]
+
+[project.scripts]
+vgi-causal = "vgi_causal.worker:main"
+vgi-causal-http = "vgi_causal.worker:main_http"
+
+[project.urls]
+Homepage = "https://query.farm"
+
+[tool.uv.sources]
+# Develop against the local vgi-python checkout (sibling directory). Drop or
+# override this block to resolve vgi-python from an index instead.
+vgi-python = { path = "../vgi-python" }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["vgi_causal"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "vgi_causal/",
+    "causal_worker.py",
+    "conftest.py",
+    "tests/",
+    "test/",
+    "README.md",
+    "CLAUDE.md",
+    "LICENSE",
+]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.mypy]
+python_version = "3.13"
+ignore_missing_imports = true
