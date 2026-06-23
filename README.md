@@ -4,7 +4,9 @@
 
 <p align="center"><em>A <a href="https://query.farm">Query.Farm</a> VGI worker for DuckDB.</em></p>
 
-# vgi-causal
+# Causal Inference — ATE/ATT & Propensity (IPW/AIPW) in DuckDB
+
+> **vgi-causal** · a [Query.Farm](https://query.farm) VGI worker
 
 A [VGI](https://query.farm) worker that brings **causal treatment-effect
 estimation** to DuckDB/SQL: average treatment effects (ATE) by inverse-
