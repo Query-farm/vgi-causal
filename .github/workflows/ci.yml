@@ -59,7 +59,7 @@ jobs:
         run: uv run mypy vgi_causal/ causal_worker.py
 
       - name: Docstring lint (pydoclint)
-        run: uv run pydoclint vgi_causal/ causal_worker.py
+        run: uvx pydoclint --config pyproject.toml vgi_causal/ causal_worker.py
 
   # Resolve the latest published haybarn release once, so the whole matrix tests
   # the same version (and we never hardcode/pin it).
