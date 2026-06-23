@@ -132,7 +132,5 @@ def test_perfect_separation_does_not_crash() -> None:
     res = causal.ate(df, treatment="t", outcome="y")
     for est in res["estimate"]:
         assert np.isfinite(est)
-    ps = causal.propensity_scores(
-        pd.DataFrame({"id": np.arange(n), "t": t, "x1": x1}), treatment="t", id="id"
-    )
+    ps = causal.propensity_scores(pd.DataFrame({"id": np.arange(n), "t": t, "x1": x1}), treatment="t", id="id")
     assert all(0.0 < p < 1.0 for p in ps["propensity"])

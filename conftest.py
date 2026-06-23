@@ -1,2 +1,1 @@
-# Presence of this file puts the repo root on sys.path so tests can
-# `import causal_worker` and `import vgi_causal`.
+"""Put the repo root on sys.path so tests can import ``causal_worker`` and ``vgi_causal``."""

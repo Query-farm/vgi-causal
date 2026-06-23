@@ -15,7 +15,7 @@ function only writes its ``finalize`` logic.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 import pandas as pd
 import pyarrow as pa
@@ -35,15 +35,17 @@ class DrainState(ArrowSerializableDataclass):
 def serialize_batch(batch: pa.RecordBatch) -> bytes:
     """Serialize one RecordBatch to a self-describing Arrow IPC stream."""
     sink = pa.BufferOutputStream()
-    with pa.ipc.new_stream(sink, batch.schema) as writer:
+    # pyarrow.ipc ships no type stubs, so mypy sees these as untyped calls.
+    with pa.ipc.new_stream(sink, batch.schema) as writer:  # type: ignore[no-untyped-call]
         writer.write_batch(batch)
-    return sink.getvalue().to_pybytes()
+    return cast(bytes, sink.getvalue().to_pybytes())
 
 
 def deserialize_batches(value: bytes) -> list[pa.RecordBatch]:
     """Inverse of :func:`serialize_batch` for one stored blob."""
-    reader = pa.ipc.open_stream(pa.BufferReader(value))
-    return reader.read_all().to_batches()
+    # pyarrow.ipc ships no type stubs, so mypy sees this as an untyped call.
+    reader = pa.ipc.open_stream(pa.BufferReader(value))  # type: ignore[no-untyped-call]
+    return cast("list[pa.RecordBatch]", reader.read_all().to_batches())
 
 
 def input_schema_of(params: Any) -> pa.Schema:
@@ -63,12 +65,30 @@ class SinkBuffer[TArgs, TState](TableBufferingFunction[TArgs, TState]):
 
     @classmethod
     def process(cls, batch: pa.RecordBatch, params: TableBufferingParams[TArgs]) -> bytes:
+        """Sink one input batch under the single buffering key.
+
+        Args:
+            batch: A batch of input rows to buffer.
+            params: The buffering params for this execution.
+
+        Returns:
+            The execution id used as this sink's combine key.
+        """
         if batch.num_rows:
             params.storage.state_append(_DATA_KEY, b"", serialize_batch(batch))
         return params.execution_id
 
     @classmethod
     def combine(cls, state_ids: list[bytes], params: TableBufferingParams[TArgs]) -> list[bytes]:
+        """Collapse all sink keys to one finalize bucket.
+
+        Args:
+            state_ids: The sink keys produced by ``process``.
+            params: The buffering params for this execution.
+
+        Returns:
+            A single-element list naming the one finalize bucket.
+        """
         return [params.execution_id]
 
     @classmethod
@@ -83,5 +103,5 @@ class SinkBuffer[TArgs, TState](TableBufferingFunction[TArgs, TState]):
         for _sid, value in params.storage.state_log_scan(_DATA_KEY, b""):
             batches.extend(deserialize_batches(value))
         if not batches:
-            return pa.Table.from_batches([], schema=input_schema).to_pandas()
-        return pa.Table.from_batches(batches, schema=input_schema).to_pandas()
+            return cast(pd.DataFrame, pa.Table.from_batches([], schema=input_schema).to_pandas())
+        return cast(pd.DataFrame, pa.Table.from_batches(batches, schema=input_schema).to_pandas())

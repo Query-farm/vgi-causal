@@ -33,9 +33,7 @@ def test_ate_function_recovers_tau() -> None:
 
 def test_propensity_function() -> None:
     df = make_confounded(n=800)
-    out = run_buffering(
-        PropensityScores, _arrow(df[["id", "t", "x1", "x2"]]), named={"treatment": "t", "id": "id"}
-    )
+    out = run_buffering(PropensityScores, _arrow(df[["id", "t", "x1", "x2"]]), named={"treatment": "t", "id": "id"})
     d = out.to_pydict()
     assert out.schema.names == ["id", "propensity", "treatment"]
     assert pa.types.is_int64(out.schema.field("id").type)

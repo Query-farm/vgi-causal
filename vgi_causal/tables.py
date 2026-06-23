@@ -28,8 +28,9 @@ import pyarrow as pa
 from vgi.arguments import Arg, TableInput
 from vgi.invocation import BindResponse
 from vgi.metadata import FunctionExample
-from vgi.table_buffering_function import OutputCollector, TableBufferingParams
+from vgi.table_buffering_function import TableBufferingParams
 from vgi.table_function import BindParams
+from vgi_rpc.rpc import OutputCollector
 
 from . import causal
 from .buffering import DrainState, SinkBuffer
@@ -72,6 +73,8 @@ _ATT_SCHEMA = pa.schema(
 
 @dataclass(slots=True, frozen=True)
 class AteArgs:
+    """Arguments for the ``ate`` table function."""
+
     data: Annotated[TableInput, Arg(0, doc="Relation: treatment, outcome, and one+ covariate columns.")]
     treatment: Annotated[str, Arg("treatment", default="treatment", doc="Binary 0/1 treatment column.")]
     outcome: Annotated[str, Arg("outcome", default="outcome", doc="Numeric outcome column.")]
@@ -79,6 +82,8 @@ class AteArgs:
 
 @dataclass(slots=True, frozen=True)
 class PropensityArgs:
+    """Arguments for the ``propensity_scores`` table function."""
+
     data: Annotated[TableInput, Arg(0, doc="Relation: id, treatment, and one+ covariate columns.")]
     treatment: Annotated[str, Arg("treatment", default="treatment", doc="Binary 0/1 treatment column.")]
     id: Annotated[str, Arg("id", default="id", doc="Row id to pass through (excluded from covariates).")]
@@ -86,6 +91,8 @@ class PropensityArgs:
 
 @dataclass(slots=True, frozen=True)
 class AttArgs:
+    """Arguments for the ``att`` table function."""
+
     data: Annotated[TableInput, Arg(0, doc="Relation: treatment, outcome, and one+ covariate columns.")]
     treatment: Annotated[str, Arg("treatment", default="treatment", doc="Binary 0/1 treatment column.")]
     outcome: Annotated[str, Arg("outcome", default="outcome", doc="Numeric outcome column.")]
@@ -102,6 +109,8 @@ class Ate(SinkBuffer[AteArgs, DrainState]):
     FunctionArguments: ClassVar[type] = AteArgs
 
     class Meta:
+        """Catalog metadata for the ``ate`` function."""
+
         name = "ate"
         description = (
             "Average Treatment Effect E[Y(1)-Y(0)] adjusting for every covariate column. "
@@ -118,12 +127,27 @@ class Ate(SinkBuffer[AteArgs, DrainState]):
 
     @classmethod
     def on_bind(cls, params: BindParams[AteArgs]) -> BindResponse:
+        """Declare the output schema at bind time.
+
+        Args:
+            params: The bind-time params for this call.
+
+        Returns:
+            A bind response carrying the ATE output schema.
+        """
         return BindResponse(output_schema=_ATE_SCHEMA)
 
     @classmethod
-    def initial_finalize_state(
-        cls, finalize_state_id: bytes, params: TableBufferingParams[AteArgs]
-    ) -> DrainState:
+    def initial_finalize_state(cls, finalize_state_id: bytes, params: TableBufferingParams[AteArgs]) -> DrainState:
+        """Create the per-finalize-stream cursor.
+
+        Args:
+            finalize_state_id: The finalize stream identifier.
+            params: The buffering params for this execution.
+
+        Returns:
+            A fresh drain cursor that emits the result batch once.
+        """
         return DrainState()
 
     @classmethod
@@ -134,6 +158,14 @@ class Ate(SinkBuffer[AteArgs, DrainState]):
         state: DrainState,
         out: OutputCollector,
     ) -> None:
+        """Run the ATE estimators over the buffered cohort and emit one batch.
+
+        Args:
+            params: The buffering params (args, output schema, storage).
+            finalize_state_id: The finalize stream identifier.
+            state: The drain cursor tracking single emission.
+            out: The collector to emit the result batch into.
+        """
         if state.done:
             out.finish()
             return
@@ -150,6 +182,8 @@ class PropensityScores(SinkBuffer[PropensityArgs, DrainState]):
     FunctionArguments: ClassVar[type] = PropensityArgs
 
     class Meta:
+        """Catalog metadata for the ``propensity_scores`` function."""
+
         name = "propensity_scores"
         description = (
             "Fit a logistic propensity model and emit per-row scores: (id, propensity, "
@@ -169,12 +203,29 @@ class PropensityScores(SinkBuffer[PropensityArgs, DrainState]):
 
     @classmethod
     def on_bind(cls, params: BindParams[PropensityArgs]) -> BindResponse:
+        """Declare the output schema at bind time.
+
+        Args:
+            params: The bind-time params for this call.
+
+        Returns:
+            A bind response carrying the propensity output schema.
+        """
         return BindResponse(output_schema=_PROPENSITY_SCHEMA)
 
     @classmethod
     def initial_finalize_state(
         cls, finalize_state_id: bytes, params: TableBufferingParams[PropensityArgs]
     ) -> DrainState:
+        """Create the per-finalize-stream cursor.
+
+        Args:
+            finalize_state_id: The finalize stream identifier.
+            params: The buffering params for this execution.
+
+        Returns:
+            A fresh drain cursor that emits the result batch once.
+        """
         return DrainState()
 
     @classmethod
@@ -185,6 +236,14 @@ class PropensityScores(SinkBuffer[PropensityArgs, DrainState]):
         state: DrainState,
         out: OutputCollector,
     ) -> None:
+        """Fit the propensity model over the buffered cohort and emit per-row scores.
+
+        Args:
+            params: The buffering params (args, output schema, storage).
+            finalize_state_id: The finalize stream identifier.
+            state: The drain cursor tracking single emission.
+            out: The collector to emit the result batch into.
+        """
         if state.done:
             out.finish()
             return
@@ -201,6 +260,8 @@ class Att(SinkBuffer[AttArgs, DrainState]):
     FunctionArguments: ClassVar[type] = AttArgs
 
     class Meta:
+        """Catalog metadata for the ``att`` function."""
+
         name = "att"
         description = (
             "Average Treatment effect on the Treated E[Y(1)-Y(0)|T=1] via IPW-ATT "
@@ -217,12 +278,27 @@ class Att(SinkBuffer[AttArgs, DrainState]):
 
     @classmethod
     def on_bind(cls, params: BindParams[AttArgs]) -> BindResponse:
+        """Declare the output schema at bind time.
+
+        Args:
+            params: The bind-time params for this call.
+
+        Returns:
+            A bind response carrying the ATT output schema.
+        """
         return BindResponse(output_schema=_ATT_SCHEMA)
 
     @classmethod
-    def initial_finalize_state(
-        cls, finalize_state_id: bytes, params: TableBufferingParams[AttArgs]
-    ) -> DrainState:
+    def initial_finalize_state(cls, finalize_state_id: bytes, params: TableBufferingParams[AttArgs]) -> DrainState:
+        """Create the per-finalize-stream cursor.
+
+        Args:
+            finalize_state_id: The finalize stream identifier.
+            params: The buffering params for this execution.
+
+        Returns:
+            A fresh drain cursor that emits the result batch once.
+        """
         return DrainState()
 
     @classmethod
@@ -233,6 +309,14 @@ class Att(SinkBuffer[AttArgs, DrainState]):
         state: DrainState,
         out: OutputCollector,
     ) -> None:
+        """Run the IPW-ATT estimator over the buffered cohort and emit one batch.
+
+        Args:
+            params: The buffering params (args, output schema, storage).
+            finalize_state_id: The finalize stream identifier.
+            state: The drain cursor tracking single emission.
+            out: The collector to emit the result batch into.
+        """
         if state.done:
             out.finish()
             return

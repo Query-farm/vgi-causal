@@ -54,6 +54,8 @@ BSD-licensed.
 
 from __future__ import annotations
 
+from typing import Any
+
 import numpy as np
 import pandas as pd
 
@@ -102,8 +104,7 @@ def _require_columns(df: pd.DataFrame, required: dict[str, str]) -> None:
     if missing:
         detail = ", ".join(f"{role} := '{col}'" for role, col in missing.items())
         raise CausalError(
-            f"missing required column(s): {detail}; "
-            f"input relation has columns: {', '.join(map(str, df.columns))}"
+            f"missing required column(s): {detail}; input relation has columns: {', '.join(map(str, df.columns))}"
         )
 
 
@@ -125,8 +126,7 @@ def _numeric(df: pd.DataFrame, column: str, *, role: str) -> np.ndarray:
     coerced = pd.to_numeric(series, errors="coerce")
     if coerced.isna().any() and not series.isna().any():
         raise CausalError(
-            f"{role} column '{column}' must be numeric, but contains "
-            f"non-numeric values (dtype {series.dtype})"
+            f"{role} column '{column}' must be numeric, but contains non-numeric values (dtype {series.dtype})"
         )
     return np.asarray(coerced, dtype=float)
 
@@ -154,8 +154,7 @@ def _binary_treatment(df: pd.DataFrame, column: str) -> np.ndarray:
     coerced = pd.to_numeric(series, errors="coerce")
     if coerced.isna().any():
         raise CausalError(
-            f"treatment column '{column}' must be binary 0/1, but contains "
-            f"non-numeric values (dtype {series.dtype})"
+            f"treatment column '{column}' must be binary 0/1, but contains non-numeric values (dtype {series.dtype})"
         )
     values = np.asarray(coerced, dtype=float)
     unique = set(np.unique(values).tolist())
@@ -220,17 +219,22 @@ def _fit_propensity(x: np.ndarray, treatment: np.ndarray, *, random_state: int) 
     model.fit(x, treatment)
     # predict_proba column order follows model.classes_; find the column for 1.
     classes = list(model.classes_)
+    scores: np.ndarray
     if 1 in classes:
         col = classes.index(1)
-        scores = model.predict_proba(x)[:, col]
+        scores = np.asarray(model.predict_proba(x)[:, col])
     else:
         # Degenerate: only one treatment class present -> constant score.
         scores = np.full(x.shape[0], float(classes[0]))
-    return np.clip(scores, _PROPENSITY_CLIP, 1.0 - _PROPENSITY_CLIP)
+    clipped: np.ndarray = np.clip(scores, _PROPENSITY_CLIP, 1.0 - _PROPENSITY_CLIP)
+    return clipped
 
 
 def _check_both_arms(treatment: np.ndarray) -> None:
     """Require at least one treated and one control row.
+
+    Args:
+        treatment: 0/1 treatment indicator array.
 
     Raises:
         CausalError: If the treatment is constant (no contrast to estimate).
@@ -250,7 +254,7 @@ def propensity_scores(
     treatment: str,
     id: str,
     random_state: int = 0,
-) -> dict[str, list]:
+) -> dict[str, list[Any]]:
     """Fit the propensity model and emit per-row propensity scores.
 
     Every column other than ``treatment`` and ``id`` is treated as a covariate.
@@ -301,6 +305,11 @@ def _ipw_ate(y: np.ndarray, t: np.ndarray, e: np.ndarray) -> tuple[float, float]
     ``1/e`` for treated and ``1/(1-e)`` for control. The standard error comes
     from the influence-function / sandwich approximation.
 
+    Args:
+        y: Outcome array.
+        t: 0/1 treatment indicator array.
+        e: Per-row propensity scores ``e(X)``.
+
     Returns:
         ``(estimate, std_error)``.
     """
@@ -326,6 +335,11 @@ def _regression_adjustment_ate(
     bootstrap-free analytic SE for the coefficient on ``T`` (which equals the
     contrast under a linear, no-interaction model), plus the per-row potential
     outcomes for reuse by AIPW.
+
+    Args:
+        y: Outcome array.
+        t: 0/1 treatment indicator array.
+        x: Covariate design matrix.
 
     Returns:
         ``(estimate, std_error, mu1, mu0)``.
@@ -366,6 +380,13 @@ def _aipw_ate(
     Consistent if *either* the outcome model or the propensity model is correct.
     The per-row influence function gives an honest standard error.
 
+    Args:
+        y: Outcome array.
+        t: 0/1 treatment indicator array.
+        e: Per-row propensity scores ``e(X)``.
+        mu1: Per-row outcome prediction under treatment.
+        mu0: Per-row outcome prediction under control.
+
     Returns:
         ``(estimate, std_error)``.
     """
@@ -383,7 +404,7 @@ def ate(
     outcome: str,
     random_state: int = 0,
     backend: str = "auto",
-) -> dict[str, list]:
+) -> dict[str, list[Any]]:
     """Average Treatment Effect (ATE) by three complementary estimators.
 
     Every column other than ``treatment`` and ``outcome`` is treated as a
@@ -452,7 +473,7 @@ def att(
     outcome: str,
     random_state: int = 0,
     n_boot: int = 200,
-) -> dict[str, list]:
+) -> dict[str, list[Any]]:
     """Average Treatment effect on the Treated (ATT) via IPW-ATT weighting.
 
     Estimates ``E[Y(1) - Y(0) | T=1]``. Treated rows contribute their observed
@@ -529,6 +550,12 @@ def _dowhy_ate(
     so the default sklearn/statsmodels path never pays its (slow) import cost.
     Returns ``None`` if dowhy is not installed, so the caller falls back to the
     in-house AIPW estimate.
+
+    Args:
+        df: The input relation.
+        treatment: Binary 0/1 treatment column name.
+        outcome: Numeric outcome column name.
+        covariates: Covariate (common-cause) column names.
 
     Returns:
         ``(estimate, std_error)`` or ``None`` if dowhy is unavailable.
