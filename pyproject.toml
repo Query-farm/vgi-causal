@@ -41,6 +41,12 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# HTTP transport: the worker can serve over HTTP (`causal_worker.py --http`)
+# in addition to stdio. That path needs vgi-python's `http` extra (waitress).
+# CI's http transport leg installs this via `uv sync --extra http`.
+http = [
+    "vgi-python[http]>=0.8.3",
+]
 # dowhy is an OPTIONAL doubly-robust backend (Microsoft, MIT). The default
 # estimators run on scikit-learn + statsmodels and need none of this.
 dowhy = ["dowhy>=0.11"]
