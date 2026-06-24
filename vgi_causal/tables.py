@@ -146,7 +146,7 @@ class Ate(SinkBuffer[AteArgs, DrainState]):
             params: The buffering params for this execution.
 
         Returns:
-            A fresh drain cursor that emits the result batch once.
+            A fresh finalize cursor (result bytes + offset at 0).
         """
         return DrainState()
 
@@ -163,17 +163,11 @@ class Ate(SinkBuffer[AteArgs, DrainState]):
         Args:
             params: The buffering params (args, output schema, storage).
             finalize_state_id: The finalize stream identifier.
-            state: The drain cursor tracking single emission.
-            out: The collector to emit the result batch into.
+            state: The finalize cursor (result bytes + offset).
+            out: The collector to emit the result slice into.
         """
-        if state.done:
-            out.finish()
-            return
-        state.done = True
         a = params.args
-        df = cls.buffered_frame(params)
-        result = causal.ate(df, treatment=a.treatment, outcome=a.outcome)
-        out.emit(pa.RecordBatch.from_pydict(result, schema=params.output_schema))
+        cls.drain_result(params, state, out, lambda df: causal.ate(df, treatment=a.treatment, outcome=a.outcome))
 
 
 class PropensityScores(SinkBuffer[PropensityArgs, DrainState]):
@@ -224,7 +218,7 @@ class PropensityScores(SinkBuffer[PropensityArgs, DrainState]):
             params: The buffering params for this execution.
 
         Returns:
-            A fresh drain cursor that emits the result batch once.
+            A fresh finalize cursor (result bytes + offset at 0).
         """
         return DrainState()
 
@@ -241,17 +235,11 @@ class PropensityScores(SinkBuffer[PropensityArgs, DrainState]):
         Args:
             params: The buffering params (args, output schema, storage).
             finalize_state_id: The finalize stream identifier.
-            state: The drain cursor tracking single emission.
-            out: The collector to emit the result batch into.
+            state: The finalize cursor (result bytes + offset).
+            out: The collector to emit the result slice into.
         """
-        if state.done:
-            out.finish()
-            return
-        state.done = True
         a = params.args
-        df = cls.buffered_frame(params)
-        result = causal.propensity_scores(df, treatment=a.treatment, id=a.id)
-        out.emit(pa.RecordBatch.from_pydict(result, schema=params.output_schema))
+        cls.drain_result(params, state, out, lambda df: causal.propensity_scores(df, treatment=a.treatment, id=a.id))
 
 
 class Att(SinkBuffer[AttArgs, DrainState]):
@@ -297,7 +285,7 @@ class Att(SinkBuffer[AttArgs, DrainState]):
             params: The buffering params for this execution.
 
         Returns:
-            A fresh drain cursor that emits the result batch once.
+            A fresh finalize cursor (result bytes + offset at 0).
         """
         return DrainState()
 
@@ -314,17 +302,11 @@ class Att(SinkBuffer[AttArgs, DrainState]):
         Args:
             params: The buffering params (args, output schema, storage).
             finalize_state_id: The finalize stream identifier.
-            state: The drain cursor tracking single emission.
-            out: The collector to emit the result batch into.
+            state: The finalize cursor (result bytes + offset).
+            out: The collector to emit the result slice into.
         """
-        if state.done:
-            out.finish()
-            return
-        state.done = True
         a = params.args
-        df = cls.buffered_frame(params)
-        result = causal.att(df, treatment=a.treatment, outcome=a.outcome)
-        out.emit(pa.RecordBatch.from_pydict(result, schema=params.output_schema))
+        cls.drain_result(params, state, out, lambda df: causal.att(df, treatment=a.treatment, outcome=a.outcome))
 
 
 TABLE_FUNCTIONS: list[type] = [Ate, PropensityScores, Att]

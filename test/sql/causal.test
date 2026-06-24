@@ -110,5 +110,59 @@ SELECT * FROM causal.ate((SELECT id AS t, y, x FROM cohort), treatment := 't', o
 ----
 binary 0/1
 
+# ---------------------------------------------------------------------------
+# HTTP continuation paging: a cohort large enough that propensity_scores emits
+# MORE than one producer batch worth of rows. propensity_scores returns one row
+# per input subject, so a 200-row cohort yields 200 output rows -- well past
+# ROWS_PER_TICK (64). Over the stateless http transport the finalize cursor must
+# page across the limit-1 continuation boundary; a position-less cursor would
+# loop forever (the test would hang/time out) instead of returning these counts.
+statement ok
+CREATE TEMP TABLE big_cohort AS
+SELECT
+  g                                  AS id,
+  (g - 100)::DOUBLE / 50.0           AS x,
+  CASE WHEN ((g * 7 + 3) % 10) < (5 + 3 * sign((g - 100)::DOUBLE)) THEN 1 ELSE 0 END AS t,
+  5.0 * (CASE WHEN ((g * 7 + 3) % 10) < (5 + 3 * sign((g - 100)::DOUBLE)) THEN 1 ELSE 0 END)
+    + 2.0 * ((g - 100)::DOUBLE / 50.0) AS y
+FROM generate_series(0, 199) AS s(g);
+
+# Every input subject gets exactly one propensity row -> 200 rows. If the cursor
+# fails to page over http this query never terminates.
+query I
+SELECT count(*)
+FROM causal.propensity_scores((SELECT id, t, x FROM big_cohort), treatment := 't', id := 'id');
+----
+200
+
+# All 200 propensity scores are valid probabilities in (0,1) -- so every paged
+# slice carried real rows, not re-emitted duplicates of row 0.
+query I
+SELECT count(*)
+FROM causal.propensity_scores((SELECT id, t, x FROM big_cohort), treatment := 't', id := 'id')
+WHERE propensity > 0.0 AND propensity < 1.0;
+----
+200
+
+# Each id appears exactly once across all paged slices (no dupes from a restart).
+query I
+SELECT count(DISTINCT id)
+FROM causal.propensity_scores((SELECT id, t, x FROM big_cohort), treatment := 't', id := 'id');
+----
+200
+
+# Ordered head of the paged result is stable and correct (ids 0..4 in order).
+query I
+SELECT id
+FROM causal.propensity_scores((SELECT id, t, x FROM big_cohort), treatment := 't', id := 'id')
+ORDER BY id
+LIMIT 5;
+----
+0
+1
+2
+3
+4
+
 statement ok
 DETACH causal;
