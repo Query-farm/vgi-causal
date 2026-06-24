@@ -4,8 +4,8 @@ The ``vgi-lint`` strict profile (0.23.0+) expects, on **every** function and
 table, a set of discovery/description tags. This module centralizes:
 
 - ``object_tags(...)`` — the five standard per-object tags
-  (``vgi.title`` VGI124, ``vgi.description_llm`` VGI112,
-  ``vgi.description_md`` VGI113, ``vgi.keywords`` VGI126,
+  (``vgi.title`` VGI124, ``vgi.doc_llm`` VGI112,
+  ``vgi.doc_md`` VGI113, ``vgi.keywords`` VGI126,
   ``vgi.source_url`` VGI128).
 - ``source_url(...)`` — the canonical GitHub blob URL for a source file.
 - ``COHORT_CTE`` — a self-contained, confounded synthetic cohort expressed as a
@@ -54,8 +54,8 @@ def source_url(relative_path: str) -> str:
 
 def object_tags(
     title: str,
-    description_llm: str,
-    description_md: str,
+    doc_llm: str,
+    doc_md: str,
     keywords: str,
     relative_path: str,
 ) -> dict[str, str]:
@@ -64,8 +64,8 @@ def object_tags(
     Args:
         title: Human-friendly display name (``vgi.title``); MUST add a word
             beyond the machine name or VGI125 fires.
-        description_llm: Markdown narrative aimed at LLM/agent audiences.
-        description_md: Markdown narrative for human docs.
+        doc_llm: Markdown narrative aimed at LLM/agent audiences.
+        doc_md: Markdown narrative for human docs.
         keywords: Comma-separated search terms/synonyms.
         relative_path: Implementing file relative to ``vgi_causal``.
 
@@ -74,8 +74,8 @@ def object_tags(
     """
     return {
         "vgi.title": title,
-        "vgi.description_llm": description_llm,
-        "vgi.description_md": description_md,
+        "vgi.doc_llm": doc_llm,
+        "vgi.doc_md": doc_md,
         "vgi.keywords": keywords,
         "vgi.source_url": source_url(relative_path),
     }

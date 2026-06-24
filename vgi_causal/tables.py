@@ -207,7 +207,7 @@ class Ate(SinkBuffer[AteArgs, DrainState]):
                 "tables.py",
             ),
             "vgi.executable_examples": _ATE_EXECUTABLE_EXAMPLES,
-            "vgi.columns_md": (
+            "vgi.result_columns_md": (
                 "| column | type | description |\n"
                 "|---|---|---|\n"
                 "| `method` | VARCHAR | Estimator: `ipw`, `regression_adjustment`, or "
@@ -333,7 +333,7 @@ class PropensityScores(SinkBuffer[PropensityArgs, DrainState]):
                 "e(X), overlap, positivity, balance, matching, weighting, causal inference",
                 "tables.py",
             ),
-            "vgi.columns_md": (
+            "vgi.result_columns_md": (
                 "| column | type | description |\n"
                 "|---|---|---|\n"
                 "| `id` | BIGINT | Passthrough row identifier (the named `id` column, "
@@ -459,7 +459,7 @@ class Att(SinkBuffer[AttArgs, DrainState]):
                 "subpopulation, bootstrap, intervention",
                 "tables.py",
             ),
-            "vgi.columns_md": (
+            "vgi.result_columns_md": (
                 "| column | type | description |\n"
                 "|---|---|---|\n"
                 "| `estimate` | DOUBLE | Average treatment effect on the treated "

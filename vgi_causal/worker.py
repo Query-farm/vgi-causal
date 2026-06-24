@@ -69,8 +69,8 @@ _CATALOG_TAGS: dict[str, str] = {
         "g-formula, aipw, doubly robust, confounding, intervention, impact analysis, "
         "observational data, cohort"
     ),
-    "vgi.description_llm": _CATALOG_DESCRIPTION_LLM,
-    "vgi.description_md": _CATALOG_DESCRIPTION_MD,
+    "vgi.doc_llm": _CATALOG_DESCRIPTION_LLM,
+    "vgi.doc_md": _CATALOG_DESCRIPTION_MD,
     "vgi.author": "Query.Farm",
     "vgi.copyright": "Copyright 2026 Query Farm LLC - https://query.farm",
     "vgi.license": "MIT",
@@ -99,8 +99,8 @@ _SCHEMA_TAGS: dict[str, str] = {
     "category": "causal-inference",
     "topic": "treatment-effect-estimation",
     "vgi.source_url": "https://github.com/Query-farm/vgi-causal/blob/main/vgi_causal/worker.py",
-    "vgi.description_llm": _SCHEMA_DESCRIPTION_LLM,
-    "vgi.description_md": _SCHEMA_DESCRIPTION_MD,
+    "vgi.doc_llm": _SCHEMA_DESCRIPTION_LLM,
+    "vgi.doc_md": _SCHEMA_DESCRIPTION_MD,
     # VGI506 representative, self-contained example queries for the schema.
     "vgi.example_queries": _SCHEMA_EXAMPLE_QUERIES,
 }
