@@ -50,12 +50,40 @@ output, so every function is a `TableBufferingFunction` (Sink+Source):
 
 - `process(batch)` — sink each input batch to execution-scoped `BoundStorage`.
 - `combine(state_ids)` — collapse to a single finalize key (one bucket).
-- `finalize(...)` — reassemble the full table (`buffered_frame()` → pandas),
-  run the estimator once, emit one result batch, then `out.finish()`.
+- `finalize(...)` — on the first tick reassemble the full table
+  (`buffered_frame()` → pandas) and run the estimator once into the cursor; each
+  tick then emits a bounded slice and `out.finish()` once drained.
 
-`SinkBuffer` in `buffering.py` implements `process`/`combine`/`buffered_frame`;
-each function only writes `on_bind` (its output schema) + `finalize`. A
-`DrainState(done: bool)` cursor makes finalize emit exactly once.
+`SinkBuffer` in `buffering.py` implements `process`/`combine`/`buffered_frame`
+plus `drain_result(...)` (the cursor loop); each function only writes `on_bind`
+(its output schema) + a one-line `finalize` that hands `drain_result` the
+estimator call.
+
+### Why finalize streams an OFFSET cursor (HTTP continuation)
+
+Over the **stateless http transport** the framework round-trips a producer's
+per-finalize-stream state through a continuation token: after each `finalize()`
+tick it wire-serializes the state (`ArrowSerializableDataclass.serialize_to_bytes()`),
+the client returns it, and the worker resumes by deserializing it — emitting at
+most one (the producer batch limit) data batch per response. subprocess/unix keep
+the live state in-process so they hide the bug; only http (and the
+`run_buffering(..., serialize_state=True)` unit harness) expose it.
+
+A position-less `DrainState{done: bool}` that emits ALL rows in one `out.emit`
+then sets `done` restarts from row 0 on every http resume and **loops forever**
+once the output exceeds one producer batch — which `propensity_scores` (one row
+per input subject, unbounded) routinely does. So `DrainState` carries an explicit
+**offset cursor**: the already-computed result batch as IPC bytes (`result_ipc`,
+fully serializable), a `started` flag, and an integer `offset`. The first tick
+computes + packs the result; every tick emits at most `ROWS_PER_TICK` (64) rows
+from `offset`, advances `offset`, and finishes when `offset >= total`. Because
+`offset` survives the wire round-trip, a resumed tick emits the NEXT slice — never
+re-runs the estimator, never restarts from row 0. `ate` (3 rows) and `att` (1 row)
+are bounded but use the identical cursor for uniformity. Results are byte-identical
+to the old emit-all path. The regression test is
+`TestCursorSurvivesContinuation` in `test_tables.py` (re-serializes finalize state
+between every tick, 10 000-tick overrun guard) plus the big-cohort paging asserts
+in `causal.test` (which only terminate over http if the cursor works).
 
 ## Estimators (the math)
 
