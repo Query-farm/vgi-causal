@@ -124,6 +124,18 @@ class Ate(SinkBuffer[AteArgs, DrainState]):
                 description="ATE by IPW, regression adjustment, and doubly-robust AIPW",
             )
         ]
+        tags = {
+            "vgi.columns_md": (
+                "| column | type | description |\n"
+                "|---|---|---|\n"
+                "| `method` | VARCHAR | Estimator: `ipw`, `regression_adjustment`, or "
+                "`aipw`. One row per method. |\n"
+                "| `estimate` | DOUBLE | Estimated average treatment effect E[Y(1)-Y(0)]. |\n"
+                "| `std_error` | DOUBLE | Standard error of the estimate. |\n"
+                "| `ci_lower` | DOUBLE | Lower bound of the 95% Wald confidence interval. |\n"
+                "| `ci_upper` | DOUBLE | Upper bound of the 95% Wald confidence interval. |"
+            )
+        }
 
     @classmethod
     def on_bind(cls, params: BindParams[AteArgs]) -> BindResponse:
@@ -194,6 +206,16 @@ class PropensityScores(SinkBuffer[PropensityArgs, DrainState]):
                 description="Per-row propensity scores with id passthrough",
             )
         ]
+        tags = {
+            "vgi.columns_md": (
+                "| column | type | description |\n"
+                "|---|---|---|\n"
+                "| `id` | BIGINT | Passthrough row identifier (the named `id` column, "
+                "excluded from covariates). |\n"
+                "| `propensity` | DOUBLE | Fitted propensity e(X)=P(T=1\\|X) in (0,1). |\n"
+                "| `treatment` | INTEGER | Observed 0/1 treatment indicator for the row. |"
+            )
+        }
 
     @classmethod
     def on_bind(cls, params: BindParams[PropensityArgs]) -> BindResponse:
@@ -263,6 +285,15 @@ class Att(SinkBuffer[AttArgs, DrainState]):
                 description="Average treatment effect on the treated (IPW-ATT)",
             )
         ]
+        tags = {
+            "vgi.columns_md": (
+                "| column | type | description |\n"
+                "|---|---|---|\n"
+                "| `estimate` | DOUBLE | Average treatment effect on the treated "
+                "E[Y(1)-Y(0)\\|T=1]. |\n"
+                "| `std_error` | DOUBLE | Bootstrap standard error of the ATT estimate. |"
+            )
+        }
 
     @classmethod
     def on_bind(cls, params: BindParams[AttArgs]) -> BindResponse:
