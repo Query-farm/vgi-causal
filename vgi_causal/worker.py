@@ -16,6 +16,7 @@ import sys
 from vgi import Worker
 from vgi.catalog import Catalog, Schema
 
+from vgi_causal.meta import COHORT_CTE
 from vgi_causal.tables import TABLE_FUNCTIONS
 
 _FUNCTIONS: list[type] = [*TABLE_FUNCTIONS]
@@ -61,6 +62,13 @@ _SCHEMA_DESCRIPTION_MD = (
 )
 
 _CATALOG_TAGS: dict[str, str] = {
+    "vgi.title": "Causal Treatment-Effect Estimation",
+    "vgi.keywords": (
+        "causal inference, treatment effect, ate, average treatment effect, att, "
+        "propensity score, ipw, inverse probability weighting, regression adjustment, "
+        "g-formula, aipw, doubly robust, confounding, intervention, impact analysis, "
+        "observational data, cohort"
+    ),
     "vgi.description_llm": _CATALOG_DESCRIPTION_LLM,
     "vgi.description_md": _CATALOG_DESCRIPTION_MD,
     "vgi.author": "Query.Farm",
@@ -70,9 +78,31 @@ _CATALOG_TAGS: dict[str, str] = {
     "vgi.support_policy_url": "https://github.com/Query-farm/vgi-causal/blob/main/README.md",
 }
 
+_SCHEMA_EXAMPLE_QUERIES = (
+    COHORT_CTE + "SELECT method, round(estimate, 2) AS estimate "
+    "FROM causal.main.ate((SELECT t, y, x FROM cohort), treatment := 't', outcome := 'y') "
+    "ORDER BY method;\n" + COHORT_CTE + "SELECT round(estimate, 2) AS att "
+    "FROM causal.main.att((SELECT t, y, x FROM cohort), treatment := 't', outcome := 'y');\n"
+    + COHORT_CTE
+    + "SELECT * FROM causal.main.propensity_scores((SELECT id, t, x FROM cohort), "
+    "treatment := 't', id := 'id') ORDER BY id LIMIT 5;"
+)
+
 _SCHEMA_TAGS: dict[str, str] = {
+    "vgi.title": "Causal Estimators (main)",
+    "vgi.keywords": (
+        "causal, ate, att, propensity_scores, treatment effect, ipw, "
+        "regression adjustment, aipw, doubly robust, propensity, confounding"
+    ),
+    # VGI123 classifying tags use BARE keys (NOT vgi.-namespaced) for faceting.
+    "domain": "statistics",
+    "category": "causal-inference",
+    "topic": "treatment-effect-estimation",
+    "vgi.source_url": "https://github.com/Query-farm/vgi-causal/blob/main/vgi_causal/worker.py",
     "vgi.description_llm": _SCHEMA_DESCRIPTION_LLM,
     "vgi.description_md": _SCHEMA_DESCRIPTION_MD,
+    # VGI506 representative, self-contained example queries for the schema.
+    "vgi.example_queries": _SCHEMA_EXAMPLE_QUERIES,
 }
 
 _CAUSAL_CATALOG = Catalog(
