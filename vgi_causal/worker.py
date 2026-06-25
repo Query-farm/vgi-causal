@@ -11,6 +11,7 @@ is a thin shim over this module for ``uv run``; installed users get the
 
 from __future__ import annotations
 
+import json
 import sys
 
 from vgi import Worker
@@ -63,11 +64,26 @@ _SCHEMA_DESCRIPTION_MD = (
 
 _CATALOG_TAGS: dict[str, str] = {
     "vgi.title": "Causal Treatment-Effect Estimation",
-    "vgi.keywords": (
-        "causal inference, treatment effect, ate, average treatment effect, att, "
-        "propensity score, ipw, inverse probability weighting, regression adjustment, "
-        "g-formula, aipw, doubly robust, confounding, intervention, impact analysis, "
-        "observational data, cohort"
+    "vgi.keywords": json.dumps(
+        [
+            "causal inference",
+            "treatment effect",
+            "ate",
+            "average treatment effect",
+            "att",
+            "propensity score",
+            "ipw",
+            "inverse probability weighting",
+            "regression adjustment",
+            "g-formula",
+            "aipw",
+            "doubly robust",
+            "confounding",
+            "intervention",
+            "impact analysis",
+            "observational data",
+            "cohort",
+        ]
     ),
     "vgi.doc_llm": _CATALOG_DESCRIPTION_LLM,
     "vgi.doc_md": _CATALOG_DESCRIPTION_MD,
@@ -90,15 +106,26 @@ _SCHEMA_EXAMPLE_QUERIES = (
 
 _SCHEMA_TAGS: dict[str, str] = {
     "vgi.title": "Causal Estimators (main)",
-    "vgi.keywords": (
-        "causal, ate, att, propensity_scores, treatment effect, ipw, "
-        "regression adjustment, aipw, doubly robust, propensity, confounding"
+    "vgi.keywords": json.dumps(
+        [
+            "causal",
+            "ate",
+            "att",
+            "propensity_scores",
+            "treatment effect",
+            "ipw",
+            "regression adjustment",
+            "aipw",
+            "doubly robust",
+            "propensity",
+            "confounding",
+        ]
     ),
     # VGI123 classifying tags use BARE keys (NOT vgi.-namespaced) for faceting.
     "domain": "statistics",
     "category": "causal-inference",
     "topic": "treatment-effect-estimation",
-    "vgi.source_url": "https://github.com/Query-farm/vgi-causal/blob/main/vgi_causal/worker.py",
+    # VGI139: source_url belongs only on the catalog object, not per-schema.
     "vgi.doc_llm": _SCHEMA_DESCRIPTION_LLM,
     "vgi.doc_md": _SCHEMA_DESCRIPTION_MD,
     # VGI506 representative, self-contained example queries for the schema.

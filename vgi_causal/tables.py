@@ -108,7 +108,9 @@ class AteArgs:
 
     data: Annotated[TableInput, Arg(0, doc="Relation: treatment, outcome, and one+ covariate columns.")]
     treatment: Annotated[str, Arg("treatment", default="treatment", doc="Binary 0/1 treatment column.")]
-    outcome: Annotated[str, Arg("outcome", default="outcome", doc="Numeric outcome column.")]
+    outcome: Annotated[
+        str, Arg("outcome", default="outcome", doc="Outcome column whose treatment effect is estimated.")
+    ]
 
 
 @dataclass(slots=True, frozen=True)
@@ -126,7 +128,9 @@ class AttArgs:
 
     data: Annotated[TableInput, Arg(0, doc="Relation: treatment, outcome, and one+ covariate columns.")]
     treatment: Annotated[str, Arg("treatment", default="treatment", doc="Binary 0/1 treatment column.")]
-    outcome: Annotated[str, Arg("outcome", default="outcome", doc="Numeric outcome column.")]
+    outcome: Annotated[
+        str, Arg("outcome", default="outcome", doc="Outcome column whose treatment effect is estimated.")
+    ]
 
 
 # ---------------------------------------------------------------------------
@@ -201,10 +205,21 @@ class Ate(SinkBuffer[AteArgs, DrainState]):
                     "- `treatment` must be binary 0/1; every non-role column is an adjusted-for "
                     "covariate. Estimates are causal only under unconfoundedness, overlap, and SUTVA."
                 ),
-                "ate, average treatment effect, causal inference, treatment effect, ipw, "
-                "inverse probability weighting, regression adjustment, g-formula, aipw, "
-                "doubly robust, propensity, intervention, impact analysis",
-                "tables.py",
+                [
+                    "ate",
+                    "average treatment effect",
+                    "causal inference",
+                    "treatment effect",
+                    "ipw",
+                    "inverse probability weighting",
+                    "regression adjustment",
+                    "g-formula",
+                    "aipw",
+                    "doubly robust",
+                    "propensity",
+                    "intervention",
+                    "impact analysis",
+                ],
             ),
             "vgi.executable_examples": _ATE_EXECUTABLE_EXAMPLES,
             "vgi.result_columns_md": (
@@ -329,9 +344,19 @@ class PropensityScores(SinkBuffer[PropensityArgs, DrainState]):
                     "- Scores are clipped to `(0, 1)`; use them for overlap diagnostics, matching, "
                     "or weighting. `treatment` must be binary 0/1."
                 ),
-                "propensity score, propensity, logistic regression, probability of treatment, "
-                "e(X), overlap, positivity, balance, matching, weighting, causal inference",
-                "tables.py",
+                [
+                    "propensity score",
+                    "propensity",
+                    "logistic regression",
+                    "probability of treatment",
+                    "e(X)",
+                    "overlap",
+                    "positivity",
+                    "balance",
+                    "matching",
+                    "weighting",
+                    "causal inference",
+                ],
             ),
             "vgi.result_columns_md": (
                 "| column | type | description |\n"
@@ -454,10 +479,18 @@ class Att(SinkBuffer[AttArgs, DrainState]):
                     "- Use `att` for the effect on the treated subpopulation; use `ate` for the "
                     "whole-population effect. `treatment` must be binary 0/1."
                 ),
-                "att, average treatment effect on the treated, treated, ipw-att, "
-                "inverse probability weighting, causal inference, treatment effect, "
-                "subpopulation, bootstrap, intervention",
-                "tables.py",
+                [
+                    "att",
+                    "average treatment effect on the treated",
+                    "treated",
+                    "ipw-att",
+                    "inverse probability weighting",
+                    "causal inference",
+                    "treatment effect",
+                    "subpopulation",
+                    "bootstrap",
+                    "intervention",
+                ],
             ),
             "vgi.result_columns_md": (
                 "| column | type | description |\n"

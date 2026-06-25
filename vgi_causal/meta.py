@@ -3,11 +3,11 @@
 The ``vgi-lint`` strict profile (0.23.0+) expects, on **every** function and
 table, a set of discovery/description tags. This module centralizes:
 
-- ``object_tags(...)`` — the five standard per-object tags
+- ``object_tags(...)`` — the four standard per-object tags
   (``vgi.title`` VGI124, ``vgi.doc_llm`` VGI112,
-  ``vgi.doc_md`` VGI113, ``vgi.keywords`` VGI126,
-  ``vgi.source_url`` VGI128).
-- ``source_url(...)`` — the canonical GitHub blob URL for a source file.
+  ``vgi.doc_md`` VGI113, ``vgi.keywords`` VGI126/VGI138).
+  ``vgi.source_url`` is intentionally NOT emitted per object (VGI139): it
+  belongs only on the catalog object, which the worker sets directly.
 - ``COHORT_CTE`` — a self-contained, confounded synthetic cohort expressed as a
   SQL CTE, so every documented example query is runnable as written (no external
   table required) and the linter can execute it.
@@ -21,8 +21,7 @@ This mirrors the deterministic story in ``test/sql/causal.test``.
 
 from __future__ import annotations
 
-#: Base GitHub blob URL for source files in this repo (pinned to ``main``).
-SOURCE_BASE = "https://github.com/Query-farm/vgi-causal/blob/main/vgi_causal"
+import json
 
 #: A self-contained confounded cohort (id, x, t, y) as a CTE. ``x`` confounds
 #: treatment ``t`` and outcome ``y = 5*t + 2*x``; the planted ATE is ``tau = 5``.
@@ -39,43 +38,46 @@ COHORT_CTE = (
 )
 
 
-def source_url(relative_path: str) -> str:
-    """Build the ``vgi.source_url`` for a file under ``vgi_causal/``.
+def keywords_json(keywords: list[str]) -> str:
+    """Serialize search keywords as a JSON array string (VGI138).
+
+    ``vgi.keywords`` is transported as a single tag string but must hold a JSON
+    array of strings (e.g. ``["ate", "propensity score"]``), not a
+    comma-separated list.
 
     Args:
-        relative_path: Implementing file relative to ``vgi_causal`` (e.g.
-            ``"tables.py"``).
+        keywords: Search terms / synonyms for the object.
 
     Returns:
-        The canonical GitHub blob URL for that source file.
+        The keywords encoded as a compact JSON array string.
     """
-    return f"{SOURCE_BASE}/{relative_path}"
+    return json.dumps(keywords)
 
 
 def object_tags(
     title: str,
     doc_llm: str,
     doc_md: str,
-    keywords: str,
-    relative_path: str,
+    keywords: list[str],
 ) -> dict[str, str]:
-    """Build the five standard per-object discovery/description tags.
+    """Build the four standard per-object discovery/description tags.
+
+    ``vgi.source_url`` is intentionally omitted here (VGI139): a per-object
+    source URL is redundant and only the catalog object should carry one.
 
     Args:
         title: Human-friendly display name (``vgi.title``); MUST add a word
             beyond the machine name or VGI125 fires.
         doc_llm: Markdown narrative aimed at LLM/agent audiences.
         doc_md: Markdown narrative for human docs.
-        keywords: Comma-separated search terms/synonyms.
-        relative_path: Implementing file relative to ``vgi_causal``.
+        keywords: Search terms / synonyms, emitted as a JSON array (VGI138).
 
     Returns:
-        A dict of the five standard per-object tags.
+        A dict of the four standard per-object tags.
     """
     return {
         "vgi.title": title,
         "vgi.doc_llm": doc_llm,
         "vgi.doc_md": doc_md,
-        "vgi.keywords": keywords,
-        "vgi.source_url": source_url(relative_path),
+        "vgi.keywords": keywords_json(keywords),
     }
