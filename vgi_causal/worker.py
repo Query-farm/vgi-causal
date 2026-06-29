@@ -41,8 +41,8 @@ _CATALOG_DESCRIPTION_MD = (
     "**Estimate the causal effect of an intervention directly in DuckDB SQL** — average "
     "treatment effect (ATE), effect on the treated (ATT), and per-subject propensity "
     "scores — from observational cohort data, with confounders adjusted for automatically. "
-    "This VGI extension turns causal questions like *\"did the treatment actually work, "
-    "after controlling for who was likely to get it?\"* into a single SQL query.\n\n"
+    'This VGI extension turns causal questions like *"did the treatment actually work, '
+    'after controlling for who was likely to get it?"* into a single SQL query.\n\n'
     "Causal inference goes beyond correlation and naive group means: a simple difference "
     "between treated and untreated subjects is biased whenever the same factors that drive "
     "treatment also drive the outcome (confounding). The `causal` catalog corrects that "
