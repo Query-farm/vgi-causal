@@ -37,6 +37,7 @@ _CATALOG_DESCRIPTION_LLM = (
 
 _CATALOG_DESCRIPTION_MD = (
     "# Causal Inference in SQL: Treatment Effects, Propensity & Doubly-Robust Estimation\n\n"
+    "![DoWhy logo](https://raw.githubusercontent.com/py-why/dowhy/main/docs/source/_static/dowhy-logo-small.png)\n\n"
     "**Estimate the causal effect of an intervention directly in DuckDB SQL** — average "
     "treatment effect (ATE), effect on the treated (ATT), and per-subject propensity "
     "scores — from observational cohort data, with confounders adjusted for automatically. "
