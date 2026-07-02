@@ -91,8 +91,104 @@ _SCHEMA_DESCRIPTION_LLM = (
 )
 
 _SCHEMA_DESCRIPTION_MD = (
-    "Causal treatment-effect estimators (`ate`, `att`, `propensity_scores`) over a whole "
-    "cohort relation, adjusting for confounders. Backed by scikit-learn and statsmodels."
+    "## Causal treatment-effect estimation\n\n"
+    "Estimate the causal effect of a **binary treatment** on an outcome from observational "
+    "cohort data, adjusting for measured confounders — directly in DuckDB SQL, with no export "
+    "to a notebook.\n\n"
+    "### Key concepts\n\n"
+    "- **Confounding** biases a naive difference of group means whenever the factors that "
+    "drive treatment also drive the outcome; adjustment corrects it.\n"
+    "- Estimators draw on the standard observational toolkit — inverse-probability weighting "
+    "(IPW), regression adjustment (the g-formula), and doubly-robust augmented IPW (AIPW).\n"
+    "- Each call consumes a whole `(SELECT ...)` cohort relation plus named role arguments; "
+    "every column not named by a role is treated as an adjusted-for covariate, and treatment "
+    "must be binary `0/1`.\n\n"
+    "### When to use\n\n"
+    "Reach for these estimators for treatment-effect, impact, and intervention analysis where "
+    "the data already lives. Estimates are causal only under unconfoundedness, overlap, and "
+    "SUTVA.\n\n"
+    "Backed by scikit-learn and statsmodels, with deterministic, reproducible estimates."
+)
+
+# VGI413: an ordered category registry for the schema; every function declares a
+# ``vgi.category`` naming one of these (see vgi_causal.tables).
+_SCHEMA_CATEGORIES = json.dumps(
+    [
+        {
+            "name": "Treatment Effects",
+            "description": (
+                "Aggregate causal effect estimators: the average treatment effect (ATE) over the "
+                "whole cohort and the average treatment effect on the treated (ATT)."
+            ),
+        },
+        {
+            "name": "Propensity Diagnostics",
+            "description": (
+                "Per-subject propensity models e(X)=P(T=1|X) for overlap/positivity checks, "
+                "matching, and inverse-probability weighting."
+            ),
+        },
+    ]
+)
+
+# VGI152: a fixed analyst-task suite so `vgi-lint simulate` can measure how well
+# an agent actually uses this worker. Grader-only (never shown to the actor); each
+# reference_sql runs against the seeded, deterministic COHORT_CTE, so results are
+# reproducible run-to-run. ignore_column_names compares by VALUES.
+_COHORT_PROMPT = (
+    "You have an observational cohort defined by this DuckDB CTE (paste it verbatim at the "
+    "top of your query):\n\n```sql\n" + COHORT_CTE.strip() + "\n```\n\n"
+    "`t` is a binary 0/1 treatment indicator, `y` is the numeric outcome, and `x` is a "
+    "covariate/confounder that influences both."
+)
+
+_AGENT_TEST_TASKS = json.dumps(
+    [
+        {
+            "name": "ate_doubly_robust",
+            "prompt": (
+                _COHORT_PROMPT + " Estimate the average treatment effect of `t` on `y` using the doubly-robust "
+                "(AIPW) estimator, adjusting for `x`. Return the point estimate rounded to 2 "
+                "decimal places."
+            ),
+            "success_criteria": ("Calls causal.ate over the cohort and returns the AIPW row's estimate (~5.0)."),
+            "reference_sql": (
+                COHORT_CTE + "SELECT round(estimate, 2) AS estimate "
+                "FROM causal.main.ate((SELECT t, y, x FROM cohort), "
+                "treatment := 't', outcome := 'y') WHERE method = 'aipw'"
+            ),
+            "ignore_column_names": True,
+        },
+        {
+            "name": "att_effect_on_treated",
+            "prompt": (
+                _COHORT_PROMPT + " Estimate the average treatment effect on the treated (ATT) of `t` on `y`, "
+                "adjusting for `x`. Return the estimate rounded to 2 decimal places."
+            ),
+            "success_criteria": ("Calls causal.att over the cohort and returns the ATT estimate (~5.0)."),
+            "reference_sql": (
+                COHORT_CTE + "SELECT round(estimate, 2) AS att "
+                "FROM causal.main.att((SELECT t, y, x FROM cohort), "
+                "treatment := 't', outcome := 'y')"
+            ),
+            "ignore_column_names": True,
+        },
+        {
+            "name": "propensity_gt_half_count",
+            "prompt": (
+                _COHORT_PROMPT + " Using the worker's propensity-score estimator, fit each subject's "
+                "propensity to be treated, then return a single number: the count of subjects whose "
+                "fitted propensity score is greater than 0.5."
+            ),
+            "success_criteria": ("Calls causal.propensity_scores and returns count(*) of rows with propensity > 0.5."),
+            "reference_sql": (
+                COHORT_CTE + "SELECT count(*) AS n "
+                "FROM causal.main.propensity_scores((SELECT id, t, x FROM cohort), "
+                "treatment := 't', id := 'id') WHERE propensity > 0.5"
+            ),
+            "ignore_column_names": True,
+        },
+    ]
 )
 
 _CATALOG_TAGS: dict[str, str] = {
@@ -125,6 +221,8 @@ _CATALOG_TAGS: dict[str, str] = {
     "vgi.license": "MIT",
     "vgi.support_contact": "https://github.com/Query-farm/vgi-causal/issues",
     "vgi.support_policy_url": "https://github.com/Query-farm/vgi-causal/blob/main/README.md",
+    # VGI152: fixed analyst-task suite for `vgi-lint simulate` (grader-only).
+    "vgi.agent_test_tasks": _AGENT_TEST_TASKS,
 }
 
 _SCHEMA_EXAMPLE_QUERIES = (
@@ -161,6 +259,8 @@ _SCHEMA_TAGS: dict[str, str] = {
     # VGI139: source_url belongs only on the catalog object, not per-schema.
     "vgi.doc_llm": _SCHEMA_DESCRIPTION_LLM,
     "vgi.doc_md": _SCHEMA_DESCRIPTION_MD,
+    # VGI413: ordered category registry; each function names one via vgi.category.
+    "vgi.categories": _SCHEMA_CATEGORIES,
     # VGI506 representative, self-contained example queries for the schema.
     "vgi.example_queries": _SCHEMA_EXAMPLE_QUERIES,
 }

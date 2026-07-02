@@ -221,6 +221,7 @@ class Ate(SinkBuffer[AteArgs, DrainState]):
                     "impact analysis",
                 ],
             ),
+            "vgi.category": "Treatment Effects",
             "vgi.executable_examples": _ATE_EXECUTABLE_EXAMPLES,
             "vgi.result_columns_md": (
                 "| column | type | description |\n"
@@ -358,6 +359,7 @@ class PropensityScores(SinkBuffer[PropensityArgs, DrainState]):
                     "causal inference",
                 ],
             ),
+            "vgi.category": "Propensity Diagnostics",
             "vgi.result_columns_md": (
                 "| column | type | description |\n"
                 "|---|---|---|\n"
@@ -492,6 +494,7 @@ class Att(SinkBuffer[AttArgs, DrainState]):
                     "intervention",
                 ],
             ),
+            "vgi.category": "Treatment Effects",
             "vgi.result_columns_md": (
                 "| column | type | description |\n"
                 "|---|---|---|\n"
