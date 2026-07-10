@@ -15,7 +15,7 @@ import json
 import sys
 
 from vgi import Worker
-from vgi.catalog import Catalog, Schema
+from vgi.catalog import Catalog, Schema, View
 
 from vgi_causal.meta import COHORT_CTE
 from vgi_causal.tables import TABLE_FUNCTIONS
@@ -72,11 +72,9 @@ _CATALOG_DESCRIPTION_MD = (
     "`E[Y(1)-Y(0)|T=1]` via IPW-ATT weighting, with a bootstrap standard error.\n"
     "- `propensity_scores(rel, treatment, id)` — per-row fitted propensity "
     "`e(X)=P(T=1|X)` from the logistic model, keyed by your `id` column.\n\n"
-    "```sql\n"
-    "SELECT method, round(estimate, 2) AS estimate\n"
-    "FROM causal.ate((SELECT t, y, x FROM cohort), treatment := 't', outcome := 'y')\n"
-    "ORDER BY method;\n"
-    "```\n\n"
+    "Runnable, catalog-qualified demonstrations live in each object's example queries "
+    "(and the schema's `vgi.example_queries`), so they are executed and coverage-checked "
+    "rather than pasted inline here.\n\n"
     "Estimates are causal only under the usual assumptions — **unconfoundedness** (no "
     "unmeasured confounders given the supplied covariates), **overlap** "
     "(`0 < e(X) < 1`), and **SUTVA**. Choosing the covariate set is your modeling "
@@ -126,6 +124,13 @@ _SCHEMA_CATEGORIES = json.dumps(
             "description": (
                 "Per-subject propensity models e(X)=P(T=1|X) for overlap/positivity checks, "
                 "matching, and inverse-probability weighting."
+            ),
+        },
+        {
+            "name": "Method Reference",
+            "description": (
+                "Browsable reference tables describing the estimators the worker exposes, so an "
+                "agent can discover which methods each function emits before calling it."
             ),
         },
     ]
@@ -186,6 +191,20 @@ _AGENT_TEST_TASKS = json.dumps(
                 "FROM causal.main.propensity_scores((SELECT id, t, x FROM cohort), "
                 "treatment := 't', id := 'id') WHERE propensity > 0.5"
             ),
+            "ignore_column_names": True,
+        },
+        {
+            "name": "methods_emitted_by_ate",
+            "prompt": (
+                "The worker exposes a browsable reference table that lists its estimator methods and "
+                "which function emits each one. Using it, list the estimator method names produced by "
+                "the `ate` function, one per row, ordered alphabetically."
+            ),
+            "success_criteria": (
+                "Queries the methods reference table filtered to the ate function and returns its "
+                "three method names (aipw, ipw, regression_adjustment)."
+            ),
+            "reference_sql": ("SELECT method FROM causal.main.methods WHERE function_name = 'ate' ORDER BY method"),
             "ignore_column_names": True,
         },
     ]
@@ -265,6 +284,100 @@ _SCHEMA_TAGS: dict[str, str] = {
     "vgi.example_queries": _SCHEMA_EXAMPLE_QUERIES,
 }
 
+# VGI146: a genuine browsable table so an agent can inspect the worker's surface
+# without first guessing a table function's arguments. It is a curated registry
+# of the estimators each function emits, expressed as an inline VALUES relation so
+# it scans with no external data or credentials. Keep this in sync with the
+# `method` values produced by vgi_causal.causal.
+_METHODS_VIEW_DEFINITION = """
+SELECT * FROM (VALUES
+    ('ipw',                   'ate',               'ATE',           FALSE,
+     'Inverse-probability weighting (Hajek self-normalized contrast); reweights each subject by 1/e or 1/(1-e).'),
+    ('regression_adjustment', 'ate',               'ATE',           FALSE,
+     'g-formula: an OLS outcome model on the treatment and covariates, averaging predicted potential outcomes.'),
+    ('aipw',                  'ate',               'ATE',           TRUE,
+     'Doubly-robust augmented IPW; consistent if EITHER the propensity or the outcome model is correct.'),
+    ('ipw_att',               'att',               'ATT',           FALSE,
+     'IPW-ATT weighting: reweights controls by e/(1-e) to match the treated covariate distribution.'),
+    ('propensity',            'propensity_scores', 'e(X)=P(T=1|X)', FALSE,
+     'Regularized logistic propensity model; per-row scores clipped to (0,1) for overlap diagnostics.')
+) AS t(method, function_name, estimand, doubly_robust, description)
+"""
+
+_METHODS_VIEW_EXAMPLES = json.dumps(
+    [
+        {
+            "description": "Which estimators does the ate function emit, and which are doubly-robust?",
+            "sql": (
+                "SELECT method, doubly_robust FROM causal.main.methods WHERE function_name = 'ate' ORDER BY method"
+            ),
+        },
+        {
+            "description": "List every estimator with its estimand and the function that produces it.",
+            "sql": "SELECT function_name, method, estimand FROM causal.main.methods ORDER BY function_name, method",
+        },
+    ]
+)
+
+_METHODS_VIEW = View(
+    name="methods",
+    definition=_METHODS_VIEW_DEFINITION,
+    comment="Reference registry of the estimator methods each causal function emits",
+    column_comments={
+        "method": "Estimator identifier as it appears in output (e.g. the `method` column of `ate`).",
+        "function_name": "The catalog function that emits this method: ate, att, or propensity_scores.",
+        "estimand": "The causal quantity estimated: ATE, ATT, or the per-row propensity e(X).",
+        "doubly_robust": "TRUE when the estimator is doubly-robust (consistent if either nuisance model is right).",
+        "description": "One-line summary of the estimator and how it adjusts for confounding.",
+    },
+    tags={
+        "vgi.title": "Estimator Method Reference",
+        "vgi.doc_llm": (
+            "A browsable registry of the estimator methods this worker exposes. One row per method with "
+            "the function that emits it (ate / att / propensity_scores), the estimand it targets (ATE, "
+            "ATT, or the per-row propensity e(X)), whether it is doubly-robust, and a one-line summary. "
+            "Query it to discover which methods `ate` returns, or which estimators are doubly-robust, "
+            "before calling a table function."
+        ),
+        "vgi.doc_md": (
+            "# Estimator Method Reference\n\n"
+            "A small, self-contained registry of the estimator methods the `causal` worker exposes — one "
+            "row per method. Use it to discover the worker's surface before calling a table function: "
+            "which methods `ate` emits, which estimator is doubly-robust, and what each one estimates.\n\n"
+            "## Columns\n\n"
+            "- `method` — the estimator id (matches the `method` column emitted by `ate`).\n"
+            "- `function_name` — the function that produces the method (`ate`, `att`, or "
+            "`propensity_scores`).\n"
+            "- `estimand` — the causal quantity: `ATE`, `ATT`, or the per-row propensity `e(X)`.\n"
+            "- `doubly_robust` — `TRUE` for AIPW (consistent if either nuisance model is correct).\n"
+            "- `description` — a one-line summary of the estimator.\n\n"
+            "The registry is backed by an inline `VALUES` relation, so it scans with no external data or "
+            "credentials."
+        ),
+        "vgi.keywords": json.dumps(
+            [
+                "methods",
+                "estimators",
+                "reference",
+                "registry",
+                "ate",
+                "att",
+                "propensity",
+                "ipw",
+                "aipw",
+                "regression adjustment",
+                "doubly robust",
+                "estimand",
+            ]
+        ),
+        "vgi.category": "Method Reference",
+        "vgi.example_queries": _METHODS_VIEW_EXAMPLES,
+        # VGI123 classifying tags use BARE keys (NOT vgi.-namespaced) for faceting.
+        "domain": "statistics",
+        "topic": "treatment-effect-estimation",
+    },
+)
+
 _CAUSAL_CATALOG = Catalog(
     name="causal",
     default_schema="main",
@@ -277,6 +390,7 @@ _CAUSAL_CATALOG = Catalog(
             comment="Causal estimators: ate (IPW/RA/AIPW), att (IPW-ATT), and per-row propensity_scores",
             tags=_SCHEMA_TAGS,
             functions=list(_FUNCTIONS),
+            views=[_METHODS_VIEW],
         ),
     ],
 )

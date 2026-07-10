@@ -106,7 +106,16 @@ _ATE_EXECUTABLE_EXAMPLES = json.dumps(
 class AteArgs:
     """Arguments for the ``ate`` table function."""
 
-    data: Annotated[TableInput, Arg(0, doc="Relation: treatment, outcome, and one+ covariate columns.")]
+    data: Annotated[
+        TableInput,
+        Arg(
+            0,
+            doc=(
+                "The cohort as a (SELECT ...) subquery. Every column other than the named "
+                "treatment and outcome roles is treated as an adjusted-for covariate."
+            ),
+        ),
+    ]
     treatment: Annotated[str, Arg("treatment", default="treatment", doc="Binary 0/1 treatment column.")]
     outcome: Annotated[
         str, Arg("outcome", default="outcome", doc="Outcome column whose treatment effect is estimated.")
@@ -117,7 +126,16 @@ class AteArgs:
 class PropensityArgs:
     """Arguments for the ``propensity_scores`` table function."""
 
-    data: Annotated[TableInput, Arg(0, doc="Relation: id, treatment, and one+ covariate columns.")]
+    data: Annotated[
+        TableInput,
+        Arg(
+            0,
+            doc=(
+                "The cohort as a (SELECT ...) subquery. The named id and treatment roles are "
+                "excluded from the model; every other column is treated as a covariate."
+            ),
+        ),
+    ]
     treatment: Annotated[str, Arg("treatment", default="treatment", doc="Binary 0/1 treatment column.")]
     id: Annotated[str, Arg("id", default="id", doc="Row id to pass through (excluded from covariates).")]
 
@@ -126,7 +144,16 @@ class PropensityArgs:
 class AttArgs:
     """Arguments for the ``att`` table function."""
 
-    data: Annotated[TableInput, Arg(0, doc="Relation: treatment, outcome, and one+ covariate columns.")]
+    data: Annotated[
+        TableInput,
+        Arg(
+            0,
+            doc=(
+                "The cohort as a (SELECT ...) subquery. Every column other than the named "
+                "treatment and outcome roles is treated as an adjusted-for covariate."
+            ),
+        ),
+    ]
     treatment: Annotated[str, Arg("treatment", default="treatment", doc="Binary 0/1 treatment column.")]
     outcome: Annotated[
         str, Arg("outcome", default="outcome", doc="Outcome column whose treatment effect is estimated.")
@@ -192,12 +219,9 @@ class Ate(SinkBuffer[AteArgs, DrainState]):
                     "Average Treatment Effect `E[Y(1) - Y(0)]` of a binary treatment on a numeric "
                     "outcome, adjusting for every covariate column in the input relation.\n\n"
                     "## Usage\n\n"
-                    "```sql\n"
-                    "SELECT * FROM causal.main.ate(\n"
-                    "  (SELECT t, y, x1, x2 FROM cohort),\n"
-                    "  treatment := 't', outcome := 'y'\n"
-                    ");\n"
-                    "```\n\n"
+                    "Pass a cohort relation as the first positional argument and name the `treatment` "
+                    "and `outcome` roles; every other column is an adjusted-for covariate. A complete, "
+                    "runnable call is attached as this function's example query.\n\n"
                     "## Notes\n\n"
                     "- Emits one row per method: `ipw`, `regression_adjustment`, `aipw`.\n"
                     "- Each row carries the point estimate, its standard error, and a 95% Wald "
@@ -223,15 +247,30 @@ class Ate(SinkBuffer[AteArgs, DrainState]):
             ),
             "vgi.category": "Treatment Effects",
             "vgi.executable_examples": _ATE_EXECUTABLE_EXAMPLES,
-            "vgi.result_columns_md": (
-                "| column | type | description |\n"
-                "|---|---|---|\n"
-                "| `method` | VARCHAR | Estimator: `ipw`, `regression_adjustment`, or "
-                "`aipw`. One row per method. |\n"
-                "| `estimate` | DOUBLE | Estimated average treatment effect E[Y(1)-Y(0)]. |\n"
-                "| `std_error` | DOUBLE | Standard error of the estimate. |\n"
-                "| `ci_lower` | DOUBLE | Lower bound of the 95% Wald confidence interval. |\n"
-                "| `ci_upper` | DOUBLE | Upper bound of the 95% Wald confidence interval. |"
+            "vgi.result_columns_schema": json.dumps(
+                [
+                    {
+                        "name": "method",
+                        "type": "VARCHAR",
+                        "description": "Estimator: ipw, regression_adjustment, or aipw. One row per method.",
+                    },
+                    {
+                        "name": "estimate",
+                        "type": "DOUBLE",
+                        "description": "Estimated average treatment effect E[Y(1)-Y(0)].",
+                    },
+                    {"name": "std_error", "type": "DOUBLE", "description": "Standard error of the estimate."},
+                    {
+                        "name": "ci_lower",
+                        "type": "DOUBLE",
+                        "description": "Lower bound of the 95% Wald confidence interval.",
+                    },
+                    {
+                        "name": "ci_upper",
+                        "type": "DOUBLE",
+                        "description": "Upper bound of the 95% Wald confidence interval.",
+                    },
+                ]
             ),
         }
 
@@ -332,12 +371,9 @@ class PropensityScores(SinkBuffer[PropensityArgs, DrainState]):
                     "Per-row fitted propensity `e(X) = P(T = 1 | X)` from a regularized logistic "
                     "model.\n\n"
                     "## Usage\n\n"
-                    "```sql\n"
-                    "SELECT * FROM causal.main.propensity_scores(\n"
-                    "  (SELECT id, t, x1, x2 FROM cohort),\n"
-                    "  treatment := 't', id := 'id'\n"
-                    ") ORDER BY id;\n"
-                    "```\n\n"
+                    "Pass a cohort relation as the first positional argument and name the `treatment` "
+                    "and `id` roles; the `id` column is passed through and every other column is a "
+                    "covariate. A complete, runnable call is attached as this function's example query.\n\n"
                     "## Notes\n\n"
                     "- Emits one row per input subject: `(id, propensity, treatment)`.\n"
                     "- The `id` column is passed through and excluded from the covariates; every "
@@ -360,13 +396,24 @@ class PropensityScores(SinkBuffer[PropensityArgs, DrainState]):
                 ],
             ),
             "vgi.category": "Propensity Diagnostics",
-            "vgi.result_columns_md": (
-                "| column | type | description |\n"
-                "|---|---|---|\n"
-                "| `id` | BIGINT | Passthrough row identifier (the named `id` column, "
-                "excluded from covariates). |\n"
-                "| `propensity` | DOUBLE | Fitted propensity e(X)=P(T=1\\|X) in (0,1). |\n"
-                "| `treatment` | INTEGER | Observed 0/1 treatment indicator for the row. |"
+            "vgi.result_columns_schema": json.dumps(
+                [
+                    {
+                        "name": "id",
+                        "type": "BIGINT",
+                        "description": "Passthrough row identifier (the named id column, excluded from covariates).",
+                    },
+                    {
+                        "name": "propensity",
+                        "type": "DOUBLE",
+                        "description": "Fitted propensity e(X)=P(T=1|X) in (0,1).",
+                    },
+                    {
+                        "name": "treatment",
+                        "type": "INTEGER",
+                        "description": "Observed 0/1 treatment indicator for the row.",
+                    },
+                ]
             ),
         }
 
@@ -469,12 +516,9 @@ class Att(SinkBuffer[AttArgs, DrainState]):
                     "Average Treatment effect on the Treated `E[Y(1) - Y(0) | T = 1]` via IPW-ATT "
                     "weighting, adjusting for every covariate column.\n\n"
                     "## Usage\n\n"
-                    "```sql\n"
-                    "SELECT * FROM causal.main.att(\n"
-                    "  (SELECT t, y, x1, x2 FROM cohort),\n"
-                    "  treatment := 't', outcome := 'y'\n"
-                    ");\n"
-                    "```\n\n"
+                    "Pass a cohort relation as the first positional argument and name the `treatment` "
+                    "and `outcome` roles; every other column is an adjusted-for covariate. A complete, "
+                    "runnable call is attached as this function's example query.\n\n"
                     "## Notes\n\n"
                     "- Emits a single row: `(estimate, std_error)`.\n"
                     "- `std_error` is a deterministic, seeded bootstrap SE.\n"
@@ -495,12 +539,19 @@ class Att(SinkBuffer[AttArgs, DrainState]):
                 ],
             ),
             "vgi.category": "Treatment Effects",
-            "vgi.result_columns_md": (
-                "| column | type | description |\n"
-                "|---|---|---|\n"
-                "| `estimate` | DOUBLE | Average treatment effect on the treated "
-                "E[Y(1)-Y(0)\\|T=1]. |\n"
-                "| `std_error` | DOUBLE | Bootstrap standard error of the ATT estimate. |"
+            "vgi.result_columns_schema": json.dumps(
+                [
+                    {
+                        "name": "estimate",
+                        "type": "DOUBLE",
+                        "description": "Average treatment effect on the treated E[Y(1)-Y(0)|T=1].",
+                    },
+                    {
+                        "name": "std_error",
+                        "type": "DOUBLE",
+                        "description": "Bootstrap standard error of the ATT estimate.",
+                    },
+                ]
             ),
         }
 
