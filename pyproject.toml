@@ -47,6 +47,12 @@ dependencies = [
 http = [
     "vgi-python[http]>=0.16.0",
 ]
+# HTTP-serving extra — installed by the Docker image (`pip install '.[serve]'`).
+# Identical to `http`; named `serve` to match the container convention across
+# the fleet (vgi-llm et al.).
+serve = [
+    "vgi-python[http]>=0.16.0",
+]
 # dowhy is an OPTIONAL doubly-robust backend (Microsoft, MIT). The default
 # estimators run on scikit-learn + statsmodels and need none of this.
 dowhy = ["dowhy>=0.11"]
@@ -60,6 +66,9 @@ dev = [
 
 [project.scripts]
 vgi-causal = "vgi_causal.worker:main"
+# `<repo>-worker` alias (fleet convention): what `bin/vgi-causal-worker` and the
+# Docker stdio entrypoint exec. Same stdio entry point as `vgi-causal`.
+vgi-causal-worker = "vgi_causal.worker:main"
 vgi-causal-http = "vgi_causal.worker:main_http"
 
 [project.urls]
