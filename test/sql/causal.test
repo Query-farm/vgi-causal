@@ -98,6 +98,22 @@ FROM causal.att((SELECT t, y, x FROM cohort), treatment := 't', outcome := 'y');
 ----
 true
 
+# The optional random_state seed is accepted and (for the noise-free linear DGP)
+# regression adjustment still recovers tau = 5 regardless of the seed.
+query I
+SELECT round(estimate, 2)
+FROM causal.ate((SELECT t, y, x FROM cohort), treatment := 't', outcome := 'y', random_state := 42)
+WHERE method = 'regression_adjustment';
+----
+5.0
+
+# att accepts random_state too; the seeded bootstrap stays near the planted effect.
+query I
+SELECT abs(estimate - 5.0) < 1.0
+FROM causal.att((SELECT t, y, x FROM cohort), treatment := 't', outcome := 'y', random_state := 7);
+----
+true
+
 # Missing column -> clear error, never a crash.
 statement error
 SELECT * FROM causal.ate((SELECT t, y, x FROM cohort), treatment := 'nope', outcome := 'y');

@@ -10,8 +10,11 @@
 # files under test/sql/. haybarn-unittest is a uv tool:
 #   uv tool install haybarn-unittest   # installs ~/.local/bin/haybarn-unittest
 
-# Worker command DuckDB uses for ATTACH (overridable).
-WORKER_STDIO    ?= uv run --python 3.13 causal_worker.py
+# Worker command DuckDB uses for ATTACH (overridable). We point at the venv
+# console script (`uv sync` installs it) rather than `uv run causal_worker.py`
+# so the worker runs the pinned SDK from the project venv, not a separately
+# resolved PEP 723 script env.
+WORKER_STDIO    ?= .venv/bin/vgi-causal
 
 # haybarn-unittest lives in the uv tools bin; keep it on PATH.
 HAYBARN_BIN     ?= $(HOME)/.local/bin

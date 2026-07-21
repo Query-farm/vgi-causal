@@ -74,17 +74,20 @@ jobs:
         run: uv python install 3.13
 
       - name: Install the worker (with the http extra)
-        # Mirrors the integration job's build: the worker is a repo-root PEP 723
-        # script driven via `uv run causal_worker.py`. Syncing the env makes the
-        # inline deps resolvable so the linter can spawn the worker and
-        # introspect its catalog metadata.
+        # Syncing the env installs the worker into `.venv` (with its console
+        # scripts) so the linter can spawn it and introspect its catalog
+        # metadata. We lint via the venv console script rather than
+        # `uv run causal_worker.py`: the PEP 723 script env resolves its own
+        # (potentially stale) SDK copy, which can emit an old catalog schema and
+        # trip a false schema-mismatch; the venv runs the pinned SDK.
         run: uv sync --python 3.13 --extra http
 
       - name: vgi-lint
         uses: Query-farm/vgi-lint-check@v1
         with:
-          location: "uv run causal_worker.py"
+          location: ".venv/bin/vgi-causal"
           fail-on: info
+          version: "0.73.0"
 
   # Resolve the latest published haybarn release once, so the whole matrix tests
   # the same version (and we never hardcode/pin it).
@@ -151,17 +154,17 @@ jobs:
       - name: Resolve runner + worker paths
         run: |
           # Absolute paths: run-integration.sh cd's into a staging dir before
-          # invoking the runner, so relative paths would not resolve. The worker
-          # is a repo-root PEP 723 script (no console-script); `uv run` reads its
-          # inline deps and resolves them, so an absolute script path spawns
-          # correctly regardless of cwd — exactly how DuckDB ATTACH and the
-          # pytest fixture drive it. WORKER_CMD is used directly as the stdio
-          # LOCATION for subprocess, and as the process the harness boots for
-          # --http / --unix.
+          # invoking the runner, so relative paths would not resolve. `uv sync`
+          # installs the worker into `.venv` with a `vgi-causal` console script;
+          # we spawn that (absolute path) rather than `uv run causal_worker.py`
+          # so the worker runs the pinned SDK from the project venv, not a
+          # separately resolved PEP 723 script env. WORKER_CMD is used directly
+          # as the stdio LOCATION for subprocess, and as the process the harness
+          # boots for --http / --unix.
           UNITTEST="$PWD/$(find hb -name 'haybarn-unittest' -type f | head -1)"
           chmod +x "$UNITTEST"
           echo "HAYBARN_UNITTEST=$UNITTEST" >> "$GITHUB_ENV"
-          echo "WORKER_CMD=uv run --python 3.13 $PWD/causal_worker.py" >> "$GITHUB_ENV"
+          echo "WORKER_CMD=$PWD/.venv/bin/vgi-causal" >> "$GITHUB_ENV"
 
       - name: Run extension integration suite (${{ matrix.transport }})
         run: ci/run-integration.sh

@@ -28,7 +28,6 @@ from typing import Annotated, ClassVar
 import pyarrow as pa
 from vgi.arguments import Arg, TableInput
 from vgi.invocation import BindResponse
-from vgi.metadata import FunctionExample
 from vgi.table_buffering_function import TableBufferingParams
 from vgi.table_function import BindParams
 from vgi_rpc.rpc import OutputCollector
@@ -96,6 +95,39 @@ _ATE_EXECUTABLE_EXAMPLES = json.dumps(
     ]
 )
 
+_PROPENSITY_EXAMPLE_QUERIES = json.dumps(
+    [
+        {
+            "description": "The five subjects most likely to have been treated, by fitted propensity.",
+            "sql": (
+                COHORT_CTE + "SELECT id, round(propensity, 3) AS propensity, treatment "
+                "FROM causal.main.propensity_scores((SELECT id, t, x FROM cohort), "
+                "treatment := 't', id := 'id') ORDER BY propensity DESC LIMIT 5"
+            ),
+        },
+        {
+            "description": "Count subjects whose fitted propensity exceeds one half (an overlap check).",
+            "sql": (
+                COHORT_CTE + "SELECT count(*) AS n_high_propensity "
+                "FROM causal.main.propensity_scores((SELECT id, t, x FROM cohort), "
+                "treatment := 't', id := 'id') WHERE propensity > 0.5"
+            ),
+        },
+    ]
+)
+
+_ATT_EXAMPLE_QUERIES = json.dumps(
+    [
+        {
+            "description": "Average treatment effect on the treated (IPW-ATT), with its bootstrap standard error.",
+            "sql": (
+                COHORT_CTE + "SELECT round(estimate, 2) AS estimate, round(std_error, 3) AS std_error "
+                "FROM causal.main.att((SELECT t, y, x FROM cohort), treatment := 't', outcome := 'y')"
+            ),
+        },
+    ]
+)
+
 
 # ---------------------------------------------------------------------------
 # Argument dataclasses -- (SELECT ...) relation as Arg(0), roles as named args
@@ -120,6 +152,14 @@ class AteArgs:
     outcome: Annotated[
         str, Arg("outcome", default="outcome", doc="Outcome column whose treatment effect is estimated.")
     ]
+    random_state: Annotated[
+        int,
+        Arg(
+            "random_state",
+            default=0,
+            doc="Seed for the deterministic propensity-model fit; vary it to probe estimate stability.",
+        ),
+    ]
 
 
 @dataclass(slots=True, frozen=True)
@@ -138,6 +178,14 @@ class PropensityArgs:
     ]
     treatment: Annotated[str, Arg("treatment", default="treatment", doc="Binary 0/1 treatment column.")]
     id: Annotated[str, Arg("id", default="id", doc="Row id to pass through (excluded from covariates).")]
+    random_state: Annotated[
+        int,
+        Arg(
+            "random_state",
+            default=0,
+            doc="Seed for the deterministic propensity-model fit; vary it to probe score stability.",
+        ),
+    ]
 
 
 @dataclass(slots=True, frozen=True)
@@ -157,6 +205,14 @@ class AttArgs:
     treatment: Annotated[str, Arg("treatment", default="treatment", doc="Binary 0/1 treatment column.")]
     outcome: Annotated[
         str, Arg("outcome", default="outcome", doc="Outcome column whose treatment effect is estimated.")
+    ]
+    random_state: Annotated[
+        int,
+        Arg(
+            "random_state",
+            default=0,
+            doc="Seed for the deterministic propensity fit and bootstrap; vary it to probe SE stability.",
+        ),
     ]
 
 
@@ -180,15 +236,6 @@ class Ate(SinkBuffer[AteArgs, DrainState]):
             "treatment must be binary 0/1; causal only under unconfoundedness."
         )
         categories = ["causal", "estimator"]
-        examples = [
-            FunctionExample(
-                sql=(
-                    COHORT_CTE + "SELECT * FROM causal.main.ate((SELECT t, y, x FROM cohort), "
-                    "treatment := 't', outcome := 'y') ORDER BY method"
-                ),
-                description="ATE by IPW, regression adjustment, and doubly-robust AIPW",
-            )
-        ]
         tags = {
             **meta.object_tags(
                 "Average Treatment Effect Estimator",
@@ -200,7 +247,8 @@ class Ate(SinkBuffer[AteArgs, DrainState]):
                     "**Inputs.** A `(SELECT ...)` cohort relation as the first positional argument, "
                     "plus named role args `treatment` (a binary 0/1 column) and `outcome` (a numeric "
                     "column). Every remaining column is treated as a covariate/confounder and is "
-                    "adjusted for.\n\n"
+                    "adjusted for. An optional `random_state` (default 0) seeds the deterministic "
+                    "propensity fit.\n\n"
                     "**Output.** Three rows, one per estimator: `ipw` (inverse-probability "
                     "weighting, Hajek/self-normalized), `regression_adjustment` (g-formula via OLS), "
                     "and `aipw` (doubly-robust). Each row has `estimate`, `std_error`, and a 95% "
@@ -247,6 +295,9 @@ class Ate(SinkBuffer[AteArgs, DrainState]):
             ),
             "vgi.category": "Treatment Effects",
             "vgi.executable_examples": _ATE_EXECUTABLE_EXAMPLES,
+            # VGI515: the native duckdb_functions().examples carrier drops the
+            # per-example description, so also ship the described JSON here.
+            "vgi.example_queries": _ATE_EXECUTABLE_EXAMPLES,
             "vgi.result_columns_schema": json.dumps(
                 [
                     {
@@ -316,7 +367,12 @@ class Ate(SinkBuffer[AteArgs, DrainState]):
             out: The collector to emit the result slice into.
         """
         a = params.args
-        cls.drain_result(params, state, out, lambda df: causal.ate(df, treatment=a.treatment, outcome=a.outcome))
+        cls.drain_result(
+            params,
+            state,
+            out,
+            lambda df: causal.ate(df, treatment=a.treatment, outcome=a.outcome, random_state=a.random_state),
+        )
 
 
 class PropensityScores(SinkBuffer[PropensityArgs, DrainState]):
@@ -334,15 +390,6 @@ class PropensityScores(SinkBuffer[PropensityArgs, DrainState]):
             "every other column is a covariate. treatment must be binary 0/1."
         )
         categories = ["causal", "estimator"]
-        examples = [
-            FunctionExample(
-                sql=(
-                    COHORT_CTE + "SELECT * FROM causal.main.propensity_scores((SELECT id, t, x FROM cohort), "
-                    "treatment := 't', id := 'id') ORDER BY id LIMIT 5"
-                ),
-                description="Per-row propensity scores with id passthrough",
-            )
-        ]
         tags = {
             **meta.object_tags(
                 "Per-Row Propensity Score Estimator",
@@ -354,9 +401,10 @@ class PropensityScores(SinkBuffer[PropensityArgs, DrainState]):
                     "**Inputs.** A `(SELECT ...)` cohort relation as the first positional argument, "
                     "plus named role args `treatment` (a binary 0/1 column) and `id` (a row "
                     "identifier passed through and **excluded** from the covariates). Every other "
-                    "column is a covariate fed to the logistic model.\n\n"
-                    "**Output.** One row per input row: `id` (BIGINT), `propensity` (DOUBLE in "
-                    "`(0, 1)`), and `treatment` (INTEGER 0/1).\n\n"
+                    "column is a covariate fed to the logistic model. An optional `random_state` "
+                    "(default 0) seeds the deterministic fit.\n\n"
+                    "**Output.** One row per input row: `id` (`BIGINT`), `propensity` (`DOUBLE` in "
+                    "`(0, 1)`), and `treatment` (`INTEGER` 0/1).\n\n"
                     "**When to use.** Diagnose overlap/positivity before estimating effects, build "
                     "matched or weighted cohorts, or trim units with extreme scores. The scores are "
                     "the same ones `ate`/`att` use internally for IPW.\n\n"
@@ -396,6 +444,9 @@ class PropensityScores(SinkBuffer[PropensityArgs, DrainState]):
                 ],
             ),
             "vgi.category": "Propensity Diagnostics",
+            # VGI515: the native duckdb_functions().examples carrier drops the
+            # per-example description, so also ship the described JSON here.
+            "vgi.example_queries": _PROPENSITY_EXAMPLE_QUERIES,
             "vgi.result_columns_schema": json.dumps(
                 [
                     {
@@ -461,7 +512,12 @@ class PropensityScores(SinkBuffer[PropensityArgs, DrainState]):
             out: The collector to emit the result slice into.
         """
         a = params.args
-        cls.drain_result(params, state, out, lambda df: causal.propensity_scores(df, treatment=a.treatment, id=a.id))
+        cls.drain_result(
+            params,
+            state,
+            out,
+            lambda df: causal.propensity_scores(df, treatment=a.treatment, id=a.id, random_state=a.random_state),
+        )
 
 
 class Att(SinkBuffer[AttArgs, DrainState]):
@@ -479,15 +535,6 @@ class Att(SinkBuffer[AttArgs, DrainState]):
             "(estimate, std_error). treatment must be binary 0/1."
         )
         categories = ["causal", "estimator"]
-        examples = [
-            FunctionExample(
-                sql=(
-                    COHORT_CTE + "SELECT round(estimate, 2) AS estimate FROM causal.main.att("
-                    "(SELECT t, y, x FROM cohort), treatment := 't', outcome := 'y')"
-                ),
-                description="Average treatment effect on the treated (IPW-ATT)",
-            )
-        ]
         tags = {
             **meta.object_tags(
                 "Average Treatment Effect on the Treated",
@@ -498,7 +545,8 @@ class Att(SinkBuffer[AttArgs, DrainState]):
                     "treatment (IPW-ATT) weighting.\n\n"
                     "**Inputs.** A `(SELECT ...)` cohort relation as the first positional argument, "
                     "plus named role args `treatment` (a binary 0/1 column) and `outcome` (a numeric "
-                    "column). Every remaining column is a covariate/confounder and is adjusted for.\n\n"
+                    "column). Every remaining column is a covariate/confounder and is adjusted for. "
+                    "An optional `random_state` (default 0) seeds the propensity fit and the bootstrap.\n\n"
                     "**Output.** A single row: `estimate` (the ATT) and `std_error` (a deterministic, "
                     "seeded bootstrap standard error).\n\n"
                     "**When to use.** When the policy question is about those who were treated -- "
@@ -539,6 +587,9 @@ class Att(SinkBuffer[AttArgs, DrainState]):
                 ],
             ),
             "vgi.category": "Treatment Effects",
+            # VGI515: the native duckdb_functions().examples carrier drops the
+            # per-example description, so also ship the described JSON here.
+            "vgi.example_queries": _ATT_EXAMPLE_QUERIES,
             "vgi.result_columns_schema": json.dumps(
                 [
                     {
@@ -597,7 +648,12 @@ class Att(SinkBuffer[AttArgs, DrainState]):
             out: The collector to emit the result slice into.
         """
         a = params.args
-        cls.drain_result(params, state, out, lambda df: causal.att(df, treatment=a.treatment, outcome=a.outcome))
+        cls.drain_result(
+            params,
+            state,
+            out,
+            lambda df: causal.att(df, treatment=a.treatment, outcome=a.outcome, random_state=a.random_state),
+        )
 
 
 TABLE_FUNCTIONS: list[type] = [Ate, PropensityScores, Att]

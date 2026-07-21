@@ -50,6 +50,16 @@ def test_att_function() -> None:
     assert abs(d["estimate"][0] - TRUE_TAU) < 0.6
 
 
+def test_random_state_arg_is_accepted() -> None:
+    # The optional random_state named arg flows through to the estimator; att's
+    # seeded bootstrap still recovers tau, and a different seed stays in range.
+    df = make_confounded()
+    tbl = _arrow(df[["t", "y", "x1", "x2"]])
+    out = run_buffering(Att, tbl, named={"treatment": "t", "outcome": "y", "random_state": 7})
+    assert out.num_rows == 1
+    assert abs(out.to_pydict()["estimate"][0] - TRUE_TAU) < 0.6
+
+
 def test_missing_column_raises() -> None:
     tbl = pa.table({"t": [0, 1], "y": [1.0, 2.0], "x1": [0.1, 0.2]})
     with pytest.raises(Exception, match="missing required column"):

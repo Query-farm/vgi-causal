@@ -244,14 +244,32 @@ _CATALOG_TAGS: dict[str, str] = {
     "vgi.agent_test_tasks": _AGENT_TEST_TASKS,
 }
 
-_SCHEMA_EXAMPLE_QUERIES = (
-    COHORT_CTE + "SELECT method, round(estimate, 2) AS estimate "
-    "FROM causal.main.ate((SELECT t, y, x FROM cohort), treatment := 't', outcome := 'y') "
-    "ORDER BY method;\n" + COHORT_CTE + "SELECT round(estimate, 2) AS att "
-    "FROM causal.main.att((SELECT t, y, x FROM cohort), treatment := 't', outcome := 'y');\n"
-    + COHORT_CTE
-    + "SELECT * FROM causal.main.propensity_scores((SELECT id, t, x FROM cohort), "
-    "treatment := 't', id := 'id') ORDER BY id LIMIT 5;"
+_SCHEMA_EXAMPLE_QUERIES = json.dumps(
+    [
+        {
+            "description": "Average treatment effect by IPW, regression adjustment, and doubly-robust AIPW.",
+            "sql": (
+                COHORT_CTE + "SELECT method, round(estimate, 2) AS estimate "
+                "FROM causal.main.ate((SELECT t, y, x FROM cohort), treatment := 't', outcome := 'y') "
+                "ORDER BY method"
+            ),
+        },
+        {
+            "description": "Average treatment effect on the treated (ATT).",
+            "sql": (
+                COHORT_CTE + "SELECT round(estimate, 2) AS att "
+                "FROM causal.main.att((SELECT t, y, x FROM cohort), treatment := 't', outcome := 'y')"
+            ),
+        },
+        {
+            "description": "The five subjects most likely to have been treated, by fitted propensity.",
+            "sql": (
+                COHORT_CTE + "SELECT id, round(propensity, 3) AS propensity, treatment "
+                "FROM causal.main.propensity_scores((SELECT id, t, x FROM cohort), "
+                "treatment := 't', id := 'id') ORDER BY propensity DESC LIMIT 5"
+            ),
+        },
+    ]
 )
 
 _SCHEMA_TAGS: dict[str, str] = {
