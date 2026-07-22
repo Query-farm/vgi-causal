@@ -89,7 +89,6 @@ jobs:
         with:
           location: ".venv/bin/vgi-causal"
           fail-on: info
-          version: "0.73.0"
 
   # Resolve the latest published haybarn release once, so the whole matrix tests
   # the same version (and we never hardcode/pin it).
