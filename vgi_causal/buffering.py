@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, cast
+from typing import Any
 
 import pandas as pd
 import pyarrow as pa
@@ -56,38 +56,34 @@ class DrainState(ArrowSerializableDataclass):
 def result_to_ipc(batch: pa.RecordBatch) -> bytes:
     """Serialize the full computed result batch to Arrow IPC bytes for the cursor."""
     sink = pa.BufferOutputStream()
-    # pyarrow.ipc ships no type stubs, so mypy sees these as untyped calls.
-    with pa.ipc.new_stream(sink, batch.schema) as writer:  # type: ignore[no-untyped-call]
+    with pa.ipc.new_stream(sink, batch.schema) as writer:
         writer.write_batch(batch)
-    return cast(bytes, sink.getvalue().to_pybytes())
+    return sink.getvalue().to_pybytes()
 
 
 def ipc_to_table(value: bytes) -> pa.Table:
     """Inverse of :func:`result_to_ipc`: read the cursor's result back as a table."""
-    # pyarrow.ipc ships no type stubs, so mypy sees this as an untyped call.
-    reader = pa.ipc.open_stream(pa.BufferReader(value))  # type: ignore[no-untyped-call]
-    return cast(pa.Table, reader.read_all())
+    reader = pa.ipc.open_stream(pa.BufferReader(value))
+    return reader.read_all()
 
 
 def serialize_batch(batch: pa.RecordBatch) -> bytes:
     """Serialize one RecordBatch to a self-describing Arrow IPC stream."""
     sink = pa.BufferOutputStream()
-    # pyarrow.ipc ships no type stubs, so mypy sees these as untyped calls.
-    with pa.ipc.new_stream(sink, batch.schema) as writer:  # type: ignore[no-untyped-call]
+    with pa.ipc.new_stream(sink, batch.schema) as writer:
         writer.write_batch(batch)
-    return cast(bytes, sink.getvalue().to_pybytes())
+    return sink.getvalue().to_pybytes()
 
 
 def deserialize_batches(value: bytes) -> list[pa.RecordBatch]:
     """Inverse of :func:`serialize_batch` for one stored blob."""
-    # pyarrow.ipc ships no type stubs, so mypy sees this as an untyped call.
-    reader = pa.ipc.open_stream(pa.BufferReader(value))  # type: ignore[no-untyped-call]
-    return cast("list[pa.RecordBatch]", reader.read_all().to_batches())
+    reader = pa.ipc.open_stream(pa.BufferReader(value))
+    return reader.read_all().to_batches()
 
 
 def input_schema_of(params: Any) -> pa.Schema:
     """Input schema from a process/finalize params object."""
-    schema = params.init_call.bind_call.input_schema
+    schema: pa.Schema | None = params.init_call.bind_call.input_schema
     assert schema is not None
     return schema
 
@@ -140,8 +136,8 @@ class SinkBuffer[TArgs, TState](TableBufferingFunction[TArgs, TState]):
         for _sid, value in params.storage.state_log_scan(_DATA_KEY, b""):
             batches.extend(deserialize_batches(value))
         if not batches:
-            return cast(pd.DataFrame, pa.Table.from_batches([], schema=input_schema).to_pandas())
-        return cast(pd.DataFrame, pa.Table.from_batches(batches, schema=input_schema).to_pandas())
+            return pa.Table.from_batches([], schema=input_schema).to_pandas()
+        return pa.Table.from_batches(batches, schema=input_schema).to_pandas()
 
     @classmethod
     def drain_result(

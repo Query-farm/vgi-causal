@@ -137,9 +137,10 @@ _SCHEMA_CATEGORIES = json.dumps(
 )
 
 # VGI152: a fixed analyst-task suite so `vgi-lint simulate` can measure how well
-# an agent actually uses this worker. Grader-only (never shown to the actor); each
-# reference_sql runs against the seeded, deterministic COHORT_CTE, so results are
-# reproducible run-to-run. ignore_column_names compares by VALUES.
+# an agent actually uses this worker. Only {name, prompt} is published here; per
+# VGI416 the grader-only fields live in the private vgi-agent-tests.yaml sidecar at
+# the repo root. Each reference_sql there runs against the seeded, deterministic
+# COHORT_CTE, so results are reproducible run-to-run.
 _COHORT_PROMPT = (
     "You have an observational cohort defined by this DuckDB CTE (paste it verbatim at the "
     "top of your query):\n\n```sql\n" + COHORT_CTE.strip() + "\n```\n\n"
@@ -156,13 +157,6 @@ _AGENT_TEST_TASKS = json.dumps(
                 "(AIPW) estimator, adjusting for `x`. Return the point estimate rounded to 2 "
                 "decimal places."
             ),
-            "success_criteria": ("Calls causal.ate over the cohort and returns the AIPW row's estimate (~5.0)."),
-            "reference_sql": (
-                COHORT_CTE + "SELECT round(estimate, 2) AS estimate "
-                "FROM causal.main.ate((SELECT t, y, x FROM cohort), "
-                "treatment := 't', outcome := 'y') WHERE method = 'aipw'"
-            ),
-            "ignore_column_names": True,
         },
         {
             "name": "att_effect_on_treated",
@@ -170,13 +164,6 @@ _AGENT_TEST_TASKS = json.dumps(
                 _COHORT_PROMPT + " Estimate the average treatment effect on the treated (ATT) of `t` on `y`, "
                 "adjusting for `x`. Return the estimate rounded to 2 decimal places."
             ),
-            "success_criteria": ("Calls causal.att over the cohort and returns the ATT estimate (~5.0)."),
-            "reference_sql": (
-                COHORT_CTE + "SELECT round(estimate, 2) AS att "
-                "FROM causal.main.att((SELECT t, y, x FROM cohort), "
-                "treatment := 't', outcome := 'y')"
-            ),
-            "ignore_column_names": True,
         },
         {
             "name": "propensity_gt_half_count",
@@ -185,13 +172,6 @@ _AGENT_TEST_TASKS = json.dumps(
                 "propensity to be treated, then return a single number: the count of subjects whose "
                 "fitted propensity score is greater than 0.5."
             ),
-            "success_criteria": ("Calls causal.propensity_scores and returns count(*) of rows with propensity > 0.5."),
-            "reference_sql": (
-                COHORT_CTE + "SELECT count(*) AS n "
-                "FROM causal.main.propensity_scores((SELECT id, t, x FROM cohort), "
-                "treatment := 't', id := 'id') WHERE propensity > 0.5"
-            ),
-            "ignore_column_names": True,
         },
         {
             "name": "methods_emitted_by_ate",
@@ -200,12 +180,6 @@ _AGENT_TEST_TASKS = json.dumps(
                 "which function emits each one. Using it, list the estimator method names produced by "
                 "the `ate` function, one per row, ordered alphabetically."
             ),
-            "success_criteria": (
-                "Queries the methods reference table filtered to the ate function and returns its "
-                "three method names (aipw, ipw, regression_adjustment)."
-            ),
-            "reference_sql": ("SELECT method FROM causal.main.methods WHERE function_name = 'ate' ORDER BY method"),
-            "ignore_column_names": True,
         },
     ]
 )
@@ -404,7 +378,7 @@ _CAUSAL_CATALOG = Catalog(
     tags=_CATALOG_TAGS,
     schemas=[
         Schema(
-            name="main",
+            path=["main"],
             comment="Causal estimators: ate (IPW/RA/AIPW), att (IPW-ATT), and per-row propensity_scores",
             tags=_SCHEMA_TAGS,
             functions=list(_FUNCTIONS),

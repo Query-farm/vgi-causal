@@ -1,0 +1,20 @@
+# Private graders for `vgi-lint simulate` (VGI416). The worker publishes only
+# task names and prompts in vgi.agent_test_tasks; these canonical solutions and
+# grading options stay in the repo and are merged by task name.
+tasks:
+  - name: ate_doubly_robust
+    reference_sql: "WITH cohort AS (\n  SELECT\n    g                                                   AS id,\n    (g - 30)::DOUBLE / 10.0                             AS x,\n    CASE WHEN ((g * 7 + 3) % 10) < 5 THEN 1 ELSE 0 END  AS t,\n    5.0 * (CASE WHEN ((g * 7 + 3) % 10) < 5 THEN 1 ELSE 0 END)\n      + 2.0 * ((g - 30)::DOUBLE / 10.0)                 AS y\n  FROM generate_series(0, 60) AS s(g)\n)\nSELECT round(estimate, 2) AS estimate FROM causal.main.ate((SELECT t, y, x FROM cohort), treatment := 't', outcome := 'y') WHERE method = 'aipw'"
+    success_criteria: "Calls causal.ate over the cohort and returns the AIPW row's estimate (~5.0)."
+    ignore_column_names: true
+  - name: att_effect_on_treated
+    reference_sql: "WITH cohort AS (\n  SELECT\n    g                                                   AS id,\n    (g - 30)::DOUBLE / 10.0                             AS x,\n    CASE WHEN ((g * 7 + 3) % 10) < 5 THEN 1 ELSE 0 END  AS t,\n    5.0 * (CASE WHEN ((g * 7 + 3) % 10) < 5 THEN 1 ELSE 0 END)\n      + 2.0 * ((g - 30)::DOUBLE / 10.0)                 AS y\n  FROM generate_series(0, 60) AS s(g)\n)\nSELECT round(estimate, 2) AS att FROM causal.main.att((SELECT t, y, x FROM cohort), treatment := 't', outcome := 'y')"
+    success_criteria: "Calls causal.att over the cohort and returns the ATT estimate (~5.0)."
+    ignore_column_names: true
+  - name: propensity_gt_half_count
+    reference_sql: "WITH cohort AS (\n  SELECT\n    g                                                   AS id,\n    (g - 30)::DOUBLE / 10.0                             AS x,\n    CASE WHEN ((g * 7 + 3) % 10) < 5 THEN 1 ELSE 0 END  AS t,\n    5.0 * (CASE WHEN ((g * 7 + 3) % 10) < 5 THEN 1 ELSE 0 END)\n      + 2.0 * ((g - 30)::DOUBLE / 10.0)                 AS y\n  FROM generate_series(0, 60) AS s(g)\n)\nSELECT count(*) AS n FROM causal.main.propensity_scores((SELECT id, t, x FROM cohort), treatment := 't', id := 'id') WHERE propensity > 0.5"
+    success_criteria: "Calls causal.propensity_scores and returns count(*) of rows with propensity > 0.5."
+    ignore_column_names: true
+  - name: methods_emitted_by_ate
+    reference_sql: "SELECT method FROM causal.main.methods WHERE function_name = 'ate' ORDER BY method"
+    success_criteria: "Queries the methods reference table filtered to the ate function and returns its three method names (aipw, ipw, regression_adjustment)."
+    ignore_column_names: true
