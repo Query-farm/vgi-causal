@@ -8,7 +8,7 @@ statement ok
 LOAD vgi;
 
 statement ok
-ATTACH 'causal' AS causal (TYPE vgi, LOCATION '${VGI_CAUSAL_WORKER}');
+ATTACH 'causal' AS causal (TYPE vgi, LOCATION '{VGI_CAUSAL_WORKER}');
 
 # A confounded cohort. The covariate x drives BOTH treatment assignment and the
 # outcome, so a naive difference of means is biased; an adjusted estimator
