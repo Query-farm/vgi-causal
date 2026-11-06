@@ -1,6 +1,6 @@
 [project]
 name = "vgi-causal"
-version = "0.1.0"
+version = "0.2.0"
 description = "Causal treatment-effect estimation (ATE, ATT, propensity scores; IPW / regression adjustment / doubly-robust AIPW) for DuckDB via VGI"
 readme = "README.md"
 keywords = [
