@@ -17,7 +17,7 @@ propensity scores — backed by [scikit-learn](https://scikit-learn.org/) and
 
 ```sql
 INSTALL vgi FROM community; LOAD vgi;
-ATTACH 'causal' (TYPE vgi, LOCATION 'uv run causal_worker.py');
+ATTACH 'causal' (TYPE vgi, LOCATION 'uvx --from git+https://github.com/Query-farm/vgi-causal@v0.2.0 vgi-causal-worker');
 
 -- Average Treatment Effect: one row per estimator (ipw, regression_adjustment, aipw)
 SELECT * FROM causal.ate((SELECT * FROM cohort),
@@ -32,6 +32,57 @@ ORDER BY id;
 SELECT * FROM causal.att((SELECT * FROM cohort),
                          treatment := 't', outcome := 'y');
 ```
+
+## Quick start
+
+The worker isn't on PyPI; [uv](https://docs.astral.sh/uv/) runs it straight from a tagged release on GitHub. `uvx` builds an isolated environment on the first ATTACH and reuses it afterwards:
+
+```sql
+INSTALL vgi FROM community;
+LOAD vgi;
+
+ATTACH 'causal' AS causal (TYPE vgi, LOCATION 'uvx --from git+https://github.com/Query-farm/vgi-causal@v0.2.0 vgi-causal-worker');
+
+-- Average treatment effect by IPW, regression adjustment, and doubly-robust AIPW.
+WITH cohort AS (
+  SELECT
+    g                                                   AS id,
+    (g - 30)::DOUBLE / 10.0                             AS x,
+    CASE WHEN ((g * 7 + 3) % 10) < 5 THEN 1 ELSE 0 END  AS t,
+    5.0 * (CASE WHEN ((g * 7 + 3) % 10) < 5 THEN 1 ELSE 0 END)
+      + 2.0 * ((g - 30)::DOUBLE / 10.0)                 AS y
+  FROM generate_series(0, 60) AS s(g)
+)
+SELECT method, round(estimate, 2) AS estimate FROM causal.main.ate((SELECT t, y, x FROM cohort), treatment := 't', outcome := 'y') ORDER BY method;
+
+-- Average treatment effect on the treated (ATT).
+WITH cohort AS (
+  SELECT
+    g                                                   AS id,
+    (g - 30)::DOUBLE / 10.0                             AS x,
+    CASE WHEN ((g * 7 + 3) % 10) < 5 THEN 1 ELSE 0 END  AS t,
+    5.0 * (CASE WHEN ((g * 7 + 3) % 10) < 5 THEN 1 ELSE 0 END)
+      + 2.0 * ((g - 30)::DOUBLE / 10.0)                 AS y
+  FROM generate_series(0, 60) AS s(g)
+)
+SELECT round(estimate, 2) AS att FROM causal.main.att((SELECT t, y, x FROM cohort), treatment := 't', outcome := 'y');
+```
+
+Change `@v0.2.0` to move to a newer release.
+
+### Other ways to run it
+
+- **Docker** (the image bundles the worker and its dependencies):
+
+  ```sql
+  ATTACH 'causal' AS causal (TYPE vgi, LOCATION 'docker://ghcr.io/query-farm/vgi-causal:0.2.0');
+  ```
+
+- **From a local checkout** (`git clone https://github.com/Query-farm/vgi-causal`), point `LOCATION` at `uv run --project /path/to/vgi-causal vgi-causal-worker`.
+
+### Build from source
+
+To build the worker yourself, see [Development](#development).
 
 ## Data flow: one relation in, a result set out
 
@@ -112,7 +163,7 @@ end-to-end SQL tests reproducible.
 imported lazily (dowhy is slow to import) and only when explicitly requested, so
 the default path never pays its cost.
 
-## Install & run
+## Development
 
 ```sh
 uv sync --extra dev          # install deps (resolves vgi-python from ../vgi-python)
