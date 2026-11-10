@@ -185,7 +185,11 @@ _AGENT_TEST_TASKS = json.dumps(
 )
 
 _CATALOG_TAGS: dict[str, str] = {
-    "vgi.title": "Causal Treatment-Effect Estimation",
+    "vgi.title": "Causal Inference",
+    "vgi.subtitle": (
+        "Estimate treatment effects (ATE, ATT) and propensity scores from observational data "
+        "with IPW, regression adjustment, and AIPW."
+    ),
     "vgi.keywords": json.dumps(
         [
             "causal inference",
@@ -247,7 +251,7 @@ _SCHEMA_EXAMPLE_QUERIES = json.dumps(
 )
 
 _SCHEMA_TAGS: dict[str, str] = {
-    "vgi.title": "Causal Estimators (main)",
+    "vgi.title": "Causal Estimators",
     "vgi.keywords": json.dumps(
         [
             "causal",
