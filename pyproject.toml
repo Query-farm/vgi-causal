@@ -1,6 +1,6 @@
 [project]
 name = "vgi-causal"
-version = "0.3.0"
+version = "0.4.0"
 description = "Causal treatment-effect estimation (ATE, ATT, propensity scores; IPW / regression adjustment / doubly-robust AIPW) for DuckDB via VGI"
 readme = "README.md"
 keywords = [
@@ -31,7 +31,7 @@ classifiers = [
 ]
 requires-python = ">=3.13"
 dependencies = [
-    "vgi-python>=0.50.0",
+    "vgi-python>=0.51.0",
     "scikit-learn>=1.3",
     "statsmodels>=0.14",
     "scipy",
@@ -45,13 +45,13 @@ dependencies = [
 # in addition to stdio. That path needs vgi-python's `http` extra (waitress).
 # CI's http transport leg installs this via `uv sync --extra http`.
 http = [
-    "vgi-python[http]>=0.50.0",
+    "vgi-python[http]>=0.51.0",
 ]
 # HTTP-serving extra — installed by the Docker image (`pip install '.[serve]'`).
 # Identical to `http`; named `serve` to match the container convention across
 # the fleet (vgi-llm et al.).
 serve = [
-    "vgi-python[http]>=0.50.0",
+    "vgi-python[http]>=0.51.0",
 ]
 # dowhy is an OPTIONAL doubly-robust backend (Microsoft, MIT). The default
 # estimators run on scikit-learn + statsmodels and need none of this.
