@@ -184,6 +184,10 @@ end-to-end SQL tests reproducible.
 imported lazily (dowhy is slow to import) and only when explicitly requested, so
 the default path never pays its cost.
 
+## Notebooks
+
+[Run the executed confounding walkthrough](notebooks/README.md) to compare a planted synthetic effect with adjusted estimates and inspect what changes when one confounder is omitted.
+
 ## Development
 
 ```sh
