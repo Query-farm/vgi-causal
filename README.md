@@ -48,8 +48,8 @@ WITH cohort AS (
   SELECT
     g                                                   AS id,
     (g - 30)::DOUBLE / 10.0                             AS x,
-    CASE WHEN ((g * 7 + 3) % 10) < 5 THEN 1 ELSE 0 END  AS t,
-    5.0 * (CASE WHEN ((g * 7 + 3) % 10) < 5 THEN 1 ELSE 0 END)
+    CASE WHEN ((g * 7 + 3) % 10) < 5 + 3 * sign(g - 30) THEN 1 ELSE 0 END AS t,
+    5.0 * (CASE WHEN ((g * 7 + 3) % 10) < 5 + 3 * sign(g - 30) THEN 1 ELSE 0 END)
       + 2.0 * ((g - 30)::DOUBLE / 10.0)                 AS y
   FROM generate_series(0, 60) AS s(g)
 )
@@ -60,12 +60,33 @@ WITH cohort AS (
   SELECT
     g                                                   AS id,
     (g - 30)::DOUBLE / 10.0                             AS x,
-    CASE WHEN ((g * 7 + 3) % 10) < 5 THEN 1 ELSE 0 END  AS t,
-    5.0 * (CASE WHEN ((g * 7 + 3) % 10) < 5 THEN 1 ELSE 0 END)
+    CASE WHEN ((g * 7 + 3) % 10) < 5 + 3 * sign(g - 30) THEN 1 ELSE 0 END AS t,
+    5.0 * (CASE WHEN ((g * 7 + 3) % 10) < 5 + 3 * sign(g - 30) THEN 1 ELSE 0 END)
       + 2.0 * ((g - 30)::DOUBLE / 10.0)                 AS y
   FROM generate_series(0, 60) AS s(g)
 )
 SELECT round(estimate, 2) AS att FROM causal.main.att((SELECT t, y, x FROM cohort), treatment := 't', outcome := 'y');
+
+-- Overlap trimming: keep only subjects whose fitted propensity lies in [0.2, 0.8]
+-- (44 of the 61), then re-estimate the ATE by every method on that trimmed cohort.
+WITH cohort AS (
+  SELECT
+    g                                                   AS id,
+    (g - 30)::DOUBLE / 10.0                             AS x,
+    CASE WHEN ((g * 7 + 3) % 10) < 5 + 3 * sign(g - 30) THEN 1 ELSE 0 END AS t,
+    5.0 * (CASE WHEN ((g * 7 + 3) % 10) < 5 + 3 * sign(g - 30) THEN 1 ELSE 0 END)
+      + 2.0 * ((g - 30)::DOUBLE / 10.0)                 AS y
+  FROM generate_series(0, 60) AS s(g)
+),
+ps AS (
+  SELECT id, propensity
+  FROM causal.main.propensity_scores((SELECT id, t, x FROM cohort), treatment := 't', id := 'id')
+)
+SELECT method, round(estimate, 2) AS estimate, round(std_error, 3) AS std_error
+FROM causal.main.ate((SELECT c.t, c.y, c.x FROM cohort AS c JOIN ps USING (id)
+                      WHERE ps.propensity BETWEEN 0.2 AND 0.8),
+                     treatment := 't', outcome := 'y')
+ORDER BY method;
 ```
 
 Change `@v0.4.0` to move to a newer release.

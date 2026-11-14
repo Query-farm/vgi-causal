@@ -18,7 +18,12 @@ from vgi import Worker
 from vgi.catalog import Catalog, Schema, View
 
 from vgi_causal.meta import COHORT_CTE
-from vgi_causal.tables import TABLE_FUNCTIONS
+from vgi_causal.tables import (
+    COMPOSED_ATE_WITH_METHODS,
+    COMPOSED_NAIVE_VS_ADJUSTED,
+    COMPOSED_TRIMMED_ATE,
+    TABLE_FUNCTIONS,
+)
 
 _FUNCTIONS: list[type] = [*TABLE_FUNCTIONS]
 
@@ -174,6 +179,17 @@ _AGENT_TEST_TASKS = json.dumps(
             ),
         },
         {
+            "name": "trimmed_att",
+            "prompt": (
+                _COHORT_PROMPT + " Overlap trimming: fit each subject's propensity to be treated from `x` "
+                "with the worker's propensity-score estimator, drop every subject whose fitted propensity "
+                "is below 0.25 or above 0.75, then estimate the average treatment effect on the treated "
+                "(ATT) of `t` on `y` over the remaining subjects, adjusting only for `x`. Return one row "
+                "with two columns: n_kept (the number of subjects kept, an integer) and att (the ATT "
+                "estimate rounded to 2 decimal places)."
+            ),
+        },
+        {
             "name": "methods_emitted_by_ate",
             "prompt": (
                 "The worker exposes a browsable reference table that lists its estimator methods and "
@@ -247,6 +263,9 @@ _SCHEMA_EXAMPLE_QUERIES = json.dumps(
                 "treatment := 't', id := 'id') ORDER BY propensity DESC LIMIT 5"
             ),
         },
+        COMPOSED_NAIVE_VS_ADJUSTED,
+        COMPOSED_TRIMMED_ATE,
+        COMPOSED_ATE_WITH_METHODS,
     ]
 )
 

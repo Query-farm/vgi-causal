@@ -25,13 +25,18 @@ import json
 
 #: A self-contained confounded cohort (id, x, t, y) as a CTE. ``x`` confounds
 #: treatment ``t`` and outcome ``y = 5*t + 2*x``; the planted ATE is ``tau = 5``.
+#: The ``sign(g - 30)`` term is what makes it confounded: subjects with ``x > 0``
+#: are treated 8 times in 10, those with ``x < 0`` only 2 in 10 (the ``(g*7+3) % 10``
+#: pattern keeps both arms spanning the whole ``x`` range, so overlap holds). The
+#: naive treated-minus-control difference of means is ~8.42, well above tau.
+#: Same DGP as the ``cohort`` table in ``test/sql/causal.test``.
 COHORT_CTE = (
     "WITH cohort AS (\n"
     "  SELECT\n"
     "    g                                                   AS id,\n"
     "    (g - 30)::DOUBLE / 10.0                             AS x,\n"
-    "    CASE WHEN ((g * 7 + 3) % 10) < 5 THEN 1 ELSE 0 END  AS t,\n"
-    "    5.0 * (CASE WHEN ((g * 7 + 3) % 10) < 5 THEN 1 ELSE 0 END)\n"
+    "    CASE WHEN ((g * 7 + 3) % 10) < 5 + 3 * sign(g - 30) THEN 1 ELSE 0 END AS t,\n"
+    "    5.0 * (CASE WHEN ((g * 7 + 3) % 10) < 5 + 3 * sign(g - 30) THEN 1 ELSE 0 END)\n"
     "      + 2.0 * ((g - 30)::DOUBLE / 10.0)                 AS y\n"
     "  FROM generate_series(0, 60) AS s(g)\n"
     ")\n"

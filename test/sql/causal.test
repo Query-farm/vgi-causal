@@ -114,6 +114,53 @@ FROM causal.att((SELECT t, y, x FROM cohort), treatment := 't', outcome := 'y', 
 ----
 true
 
+# ---------------------------------------------------------------------------
+# Composed queries (the shapes published as composed examples / agent tasks):
+# one function's output feeding another, and an estimator joined to the methods
+# reference view.
+
+# propensity_scores -> trimmed cohort -> ate: keep subjects with propensity in
+# [0.2, 0.8] (44 of 61). RA/AIPW stay exact on the linear DGP; IPW moves.
+query IRR
+WITH ps AS (
+  SELECT id, propensity
+  FROM causal.propensity_scores((SELECT id, t, x FROM cohort), treatment := 't', id := 'id')
+)
+SELECT
+  (SELECT count(*) FROM ps WHERE propensity BETWEEN 0.2 AND 0.8),
+  round(max(estimate) FILTER (WHERE method = 'aipw'), 2),
+  round(max(estimate) FILTER (WHERE method = 'ipw'), 2)
+FROM causal.ate((SELECT c.t, c.y, c.x FROM cohort AS c JOIN ps USING (id)
+                 WHERE ps.propensity BETWEEN 0.2 AND 0.8),
+                treatment := 't', outcome := 'y');
+----
+44	5.0	5.1
+
+# propensity_scores -> trimmed cohort -> att (the trimmed_att agent task).
+query IR
+WITH ps AS (
+  SELECT id, propensity
+  FROM causal.propensity_scores((SELECT id, t, x FROM cohort), treatment := 't', id := 'id')
+)
+SELECT (SELECT count(*) FROM ps WHERE propensity BETWEEN 0.25 AND 0.75), round(estimate, 2)
+FROM causal.att((SELECT c.t, c.y, c.x FROM cohort AS c JOIN ps USING (id)
+                 WHERE ps.propensity BETWEEN 0.25 AND 0.75),
+                treatment := 't', outcome := 'y');
+----
+35	5.09
+
+# ate joined to the methods view: every emitted method is registered for ate,
+# and exactly one (aipw) is doubly-robust.
+query TTT
+SELECT e.method, m.estimand, m.doubly_robust
+FROM causal.ate((SELECT t, y, x FROM cohort), treatment := 't', outcome := 'y') AS e
+JOIN causal.methods AS m ON m.method = e.method AND m.function_name = 'ate'
+ORDER BY m.doubly_robust DESC, e.method;
+----
+aipw	ATE	true
+ipw	ATE	false
+regression_adjustment	ATE	false
+
 # Missing column -> clear error, never a crash.
 statement error
 SELECT * FROM causal.ate((SELECT t, y, x FROM cohort), treatment := 'nope', outcome := 'y');

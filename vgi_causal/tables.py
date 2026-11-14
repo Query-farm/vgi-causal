@@ -73,6 +73,61 @@ _ATT_SCHEMA = pa.schema(
 # written against the attached worker with no external table.
 # ---------------------------------------------------------------------------
 
+# Composed examples -- each combines two of the worker's own objects in one
+# query. Defined once here and referenced from both the driving object's example
+# list (the agent simulator only shows per-object examples) and the schema-level
+# vgi.example_queries in vgi_causal.worker.
+
+#: ate joined to the methods reference view: every ATE estimator annotated with
+#: its estimand and doubly-robust flag.
+COMPOSED_ATE_WITH_METHODS: dict[str, str] = {
+    "description": (
+        "Each ATE estimator's estimate and 95% CI, annotated with its estimand and doubly-robust "
+        "flag from the methods reference view (doubly-robust AIPW first)."
+    ),
+    "sql": (
+        COHORT_CTE + "SELECT e.method, m.estimand, m.doubly_robust, round(e.estimate, 2) AS estimate, "
+        "round(e.ci_lower, 2) AS ci_lower, round(e.ci_upper, 2) AS ci_upper "
+        "FROM causal.main.ate((SELECT t, y, x FROM cohort), treatment := 't', outcome := 'y') AS e "
+        "JOIN causal.main.methods AS m ON m.method = e.method AND m.function_name = 'ate' "
+        "ORDER BY m.doubly_robust DESC, e.method"
+    ),
+}
+
+#: propensity_scores feeding ate: overlap trimming before re-estimating the ATE.
+COMPOSED_TRIMMED_ATE: dict[str, str] = {
+    "description": (
+        "Overlap trimming: keep only subjects whose fitted propensity lies in [0.2, 0.8] "
+        "(44 of the 61), then re-estimate the ATE by every method on that trimmed cohort."
+    ),
+    "sql": (
+        COHORT_CTE + ", ps AS (SELECT id, propensity "
+        "FROM causal.main.propensity_scores((SELECT id, t, x FROM cohort), treatment := 't', id := 'id')) "
+        "SELECT method, round(estimate, 2) AS estimate, round(std_error, 3) AS std_error "
+        "FROM causal.main.ate((SELECT c.t, c.y, c.x FROM cohort AS c JOIN ps USING (id) "
+        "WHERE ps.propensity BETWEEN 0.2 AND 0.8), treatment := 't', outcome := 'y') "
+        "ORDER BY method"
+    ),
+}
+
+#: ate and att side by side against the naive (confounded) difference of means.
+COMPOSED_NAIVE_VS_ADJUSTED: dict[str, str] = {
+    "description": (
+        "Naive treated-minus-control difference of means next to the doubly-robust ATE and the "
+        "ATT: confounding by x inflates the naive contrast well above both adjusted estimates."
+    ),
+    "sql": (
+        COHORT_CTE + ", naive AS (SELECT avg(y) FILTER (WHERE t = 1) - avg(y) FILTER (WHERE t = 0) AS diff "
+        "FROM cohort), "
+        "dr AS (SELECT estimate FROM causal.main.ate((SELECT t, y, x FROM cohort), "
+        "treatment := 't', outcome := 'y') WHERE method = 'aipw'), "
+        "treated AS (SELECT estimate FROM causal.main.att((SELECT t, y, x FROM cohort), "
+        "treatment := 't', outcome := 'y')) "
+        "SELECT round(naive.diff, 2) AS naive_diff, round(dr.estimate, 2) AS ate_aipw, "
+        "round(treated.estimate, 2) AS att FROM naive CROSS JOIN dr CROSS JOIN treated"
+    ),
+}
+
 _ATE_EXECUTABLE_EXAMPLES = json.dumps(
     [
         {
@@ -92,6 +147,7 @@ _ATE_EXECUTABLE_EXAMPLES = json.dumps(
                 "treatment := 't', outcome := 'y') WHERE method = 'aipw'"
             ),
         },
+        COMPOSED_ATE_WITH_METHODS,
     ]
 )
 
@@ -113,6 +169,7 @@ _PROPENSITY_EXAMPLE_QUERIES = json.dumps(
                 "treatment := 't', id := 'id') WHERE propensity > 0.5"
             ),
         },
+        COMPOSED_TRIMMED_ATE,
     ]
 )
 
@@ -125,6 +182,7 @@ _ATT_EXAMPLE_QUERIES = json.dumps(
                 "FROM causal.main.att((SELECT t, y, x FROM cohort), treatment := 't', outcome := 'y')"
             ),
         },
+        COMPOSED_NAIVE_VS_ADJUSTED,
     ]
 )
 
