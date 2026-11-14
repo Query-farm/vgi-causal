@@ -1,0 +1,44 @@
+{
+  "query": "SELECT * FROM duckdb_views() WHERE database_name='causal' ORDER BY schema_name,view_name",
+  "columns": [
+    "database_name",
+    "database_oid",
+    "schema_name",
+    "schema_oid",
+    "view_name",
+    "view_oid",
+    "comment",
+    "tags",
+    "internal",
+    "temporary",
+    "column_count",
+    "sql",
+    "is_bound"
+  ],
+  "rows": [
+    [
+      "causal",
+      22592,
+      "main",
+      22593,
+      "methods",
+      22729,
+      "Reference registry of the estimator methods each causal function emits",
+      {
+        "domain": "statistics",
+        "topic": "treatment-effect-estimation",
+        "vgi.category": "Method Reference",
+        "vgi.doc_llm": "A browsable registry of the estimator methods this worker exposes. One row per method with the function that emits it (ate / att / propensity_scores), the estimand it targets (ATE, ATT, or the per-row propensity e(X)), whether it is doubly-robust, and a one-line summary. Query it to discover which methods `ate` returns, or which estimators are doubly-robust, before calling a table function.",
+        "vgi.doc_md": "# Estimator Method Reference\n\nA small, self-contained registry of the estimator methods the `causal` worker exposes \u2014 one row per method. Use it to discover the worker's surface before calling a table function: which methods `ate` emits, which estimator is doubly-robust, and what each one estimates.\n\n## Columns\n\n- `method` \u2014 the estimator id (matches the `method` column emitted by `ate`).\n- `function_name` \u2014 the function that produces the method (`ate`, `att`, or `propensity_scores`).\n- `estimand` \u2014 the causal quantity: `ATE`, `ATT`, or the per-row propensity `e(X)`.\n- `doubly_robust` \u2014 `TRUE` for AIPW (consistent if either nuisance model is correct).\n- `description` \u2014 a one-line summary of the estimator.\n\nThe registry is backed by an inline `VALUES` relation, so it scans with no external data or credentials.",
+        "vgi.example_queries": "[{\"description\": \"Which estimators does the ate function emit, and which are doubly-robust?\", \"sql\": \"SELECT method, doubly_robust FROM causal.main.methods WHERE function_name = 'ate' ORDER BY method\"}, {\"description\": \"List every estimator with its estimand and the function that produces it.\", \"sql\": \"SELECT function_name, method, estimand FROM causal.main.methods ORDER BY function_name, method\"}]",
+        "vgi.keywords": "[\"methods\", \"estimators\", \"reference\", \"registry\", \"ate\", \"att\", \"propensity\", \"ipw\", \"aipw\", \"regression adjustment\", \"doubly robust\", \"estimand\"]",
+        "vgi.title": "Estimator Method Reference"
+      },
+      false,
+      false,
+      null,
+      "CREATE VIEW methods AS SELECT * FROM (SELECT * FROM (VALUES ('ipw', 'ate', 'ATE', false, 'Inverse-probability weighting (Hajek self-normalized contrast); reweights each subject by 1/e or 1/(1-e).'), ('regression_adjustment', 'ate', 'ATE', false, 'g-formula: an OLS outcome model on the treatment and covariates, averaging predicted potential outcomes.'), ('aipw', 'ate', 'ATE', true, 'Doubly-robust augmented IPW; consistent if EITHER the propensity or the outcome model is correct.'), ('ipw_att', 'att', 'ATT', false, 'IPW-ATT weighting: reweights controls by e/(1-e) to match the treated covariate distribution.'), ('propensity', 'propensity_scores', 'e(X)=P(T=1|X)', false, 'Regularized logistic propensity model; per-row scores clipped to (0,1) for overlap diagnostics.')) AS valueslist) AS t(\"method\", function_name, estimand, doubly_robust, description);",
+      false
+    ]
+  ]
+}

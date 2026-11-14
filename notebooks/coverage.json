@@ -1,0 +1,194 @@
+{
+  "schema_version": 1,
+  "catalogs": {
+    "released": {
+      "path": "coverage/catalog-release.json",
+      "sha256": "e9738b7a80fb467fe50e0e884f029b684cf2a8fa027396603a052054e90e607d",
+      "review": {
+        "status": "approved",
+        "reviewer": "Codex /root",
+        "reviewed_at": "2026-11-14T22:14:45.441422+00:00",
+        "catalog_sha256": "e9738b7a80fb467fe50e0e884f029b684cf2a8fa027396603a052054e90e607d",
+        "notes": "Complete actual publicv0.4.0 catalog: three whole-relation table functions and one methods view. No auth/writes or omitted objects."
+      }
+    },
+    "current": {
+      "path": "coverage/catalog-current.json",
+      "sha256": "f73ef00b953e9682d77a1bef628636be0ffa98c641ef67a577990fc93954a90b",
+      "review": {
+        "status": "approved",
+        "reviewer": "Codex /root",
+        "reviewed_at": "2026-11-14T22:14:45.441422+00:00",
+        "catalog_sha256": "f73ef00b953e9682d77a1bef628636be0ffa98c641ef67a577990fc93954a90b",
+        "notes": "Allfour current registrations and schemas reviewed against release; full estimation/buffering/dependency diff changes only examples/metadata. Current396fb15 not executed."
+      }
+    }
+  },
+  "notebooks": [
+    {
+      "path": "01_adjustment_needs_the_confounders.ipynb",
+      "sha256": "bc4b304c2e5ca5a5e11b6e5c0da763cce58394a3cc0dc6d3cbb8a7ac86531ee9",
+      "execution": {
+        "path": "coverage/run-01.json",
+        "sha256": "09431c5f2f6a98d0b520b925ed75ce32c2c2b44d4429eecc981ecdd0531bbea1"
+      }
+    }
+  ],
+  "examples": [
+    {
+      "object": {
+        "schema": "main",
+        "name": "propensity_scores"
+      },
+      "notebook": "01_adjustment_needs_the_confounders.ipynb",
+      "sql": [
+        {
+          "cell": "984aa9d2",
+          "reference": "causal.main.propensity_scores"
+        }
+      ],
+      "narrative_cells": [
+        "a7fbb2fa",
+        "3de26642"
+      ],
+      "result_cells": [
+        "984aa9d2",
+        "1ac4d87d",
+        "93725133"
+      ],
+      "interpretation_cells": [
+        "2b74da5f",
+        "20fc4688"
+      ],
+      "review": {
+        "status": "approved",
+        "reviewer": "Codex /root",
+        "reviewed_at": "2026-11-14T22:14:45.441422+00:00",
+        "notebook_sha256": "bc4b304c2e5ca5a5e11b6e5c0da763cce58394a3cc0dc6d3cbb8a7ac86531ee9",
+        "catalog_sha256": [
+          "e9738b7a80fb467fe50e0e884f029b684cf2a8fa027396603a052054e90e607d",
+          "f73ef00b953e9682d77a1bef628636be0ffa98c641ef67a577990fc93954a90b"
+        ],
+        "purpose": "Fit assignment probabilities from explicit role/covariate projections and audit both observed common causes.",
+        "finding": "One score per subject,valid probabilities and bounded effective sample sizes reconcile; fixed pooledSD balance compares raw and weighted means. Omittingx2preserves input while degradingitsbalance. Clipping is not claimed to establish overlap or identification."
+      }
+    },
+    {
+      "object": {
+        "schema": "main",
+        "name": "ate"
+      },
+      "notebook": "01_adjustment_needs_the_confounders.ipynb",
+      "sql": [
+        {
+          "cell": "c6ebdefb",
+          "reference": "causal.main.ate"
+        }
+      ],
+      "narrative_cells": [
+        "b98d38e6"
+      ],
+      "result_cells": [
+        "7113ec4d",
+        "79ec2f5e",
+        "93725133"
+      ],
+      "interpretation_cells": [
+        "2b74da5f",
+        "20fc4688"
+      ],
+      "review": {
+        "status": "approved",
+        "reviewer": "Codex /root",
+        "reviewed_at": "2026-11-14T22:14:45.441422+00:00",
+        "notebook_sha256": "bc4b304c2e5ca5a5e11b6e5c0da763cce58394a3cc0dc6d3cbb8a7ac86531ee9",
+        "catalog_sha256": [
+          "e9738b7a80fb467fe50e0e884f029b684cf2a8fa027396603a052054e90e607d",
+          "f73ef00b953e9682d77a1bef628636be0ffa98c641ef67a577990fc93954a90b"
+        ],
+        "purpose": "Compare three actual ATE estimators against a known constant synthetic effect and unchanged raw contrast.",
+        "finding": "SQL independently reconciles self-normalizedIPW; intervals and finiteestimates pass controls without demandingtruthrecovery. The omittedconfounder experiment changesadjusted estimates, while rawcontrast andcohort stayfixed; double robustness doesnotrestoreidentification."
+      }
+    },
+    {
+      "object": {
+        "schema": "main",
+        "name": "methods"
+      },
+      "notebook": "01_adjustment_needs_the_confounders.ipynb",
+      "sql": [
+        {
+          "cell": "methods",
+          "reference": "causal.main.methods"
+        },
+        {
+          "cell": "ab39e7fd",
+          "reference": "causal.main.methods"
+        }
+      ],
+      "narrative_cells": [
+        "methods-story",
+        "b98d38e6",
+        "att-story"
+      ],
+      "result_cells": [
+        "methods",
+        "7113ec4d",
+        "93725133"
+      ],
+      "interpretation_cells": [
+        "methods-story",
+        "att-story"
+      ],
+      "review": {
+        "status": "approved",
+        "reviewer": "Codex /root",
+        "reviewed_at": "2026-11-14T22:14:45.441422+00:00",
+        "notebook_sha256": "bc4b304c2e5ca5a5e11b6e5c0da763cce58394a3cc0dc6d3cbb8a7ac86531ee9",
+        "catalog_sha256": [
+          "e9738b7a80fb467fe50e0e884f029b684cf2a8fa027396603a052054e90e607d",
+          "f73ef00b953e9682d77a1bef628636be0ffa98c641ef67a577990fc93954a90b"
+        ],
+        "purpose": "Choose target populations and label actual method outputs using the native registry.",
+        "finding": "Five methodrows distinguishATE,ATTandpropensity; allthree returnedATE methods join to correcttarget labels. TheATTsection explains constant-effectagreement oftrue targets but possible finite-sample andheterogeneous-effectdifferences."
+      }
+    },
+    {
+      "object": {
+        "schema": "main",
+        "name": "att"
+      },
+      "notebook": "01_adjustment_needs_the_confounders.ipynb",
+      "sql": [
+        {
+          "cell": "att-fit",
+          "reference": "causal.main.att"
+        }
+      ],
+      "narrative_cells": [
+        "att-story"
+      ],
+      "result_cells": [
+        "att-result",
+        "93725133"
+      ],
+      "interpretation_cells": [
+        "att-result",
+        "att-story",
+        "20fc4688"
+      ],
+      "review": {
+        "status": "approved",
+        "reviewer": "Codex /root",
+        "reviewed_at": "2026-11-14T22:14:45.441422+00:00",
+        "notebook_sha256": "bc4b304c2e5ca5a5e11b6e5c0da763cce58394a3cc0dc6d3cbb8a7ac86531ee9",
+        "catalog_sha256": [
+          "e9738b7a80fb467fe50e0e884f029b684cf2a8fa027396603a052054e90e607d",
+          "f73ef00b953e9682d77a1bef628636be0ffa98c641ef67a577990fc93954a90b"
+        ],
+        "purpose": "Estimate the treated-population effect and independently reconstruct its odds-weighted point estimate.",
+        "finding": "ActualreleasedATT agreeswithSQLtreatedmean minus odds-weightedcontrolmean; finite nonnegative reportedSE comesfrom200seededrowbootstrapresampleswithpropensityrefitting. No claimSQLreproducesbootstrap ormatchingpointprovescausalidentification."
+      }
+    }
+  ]
+}

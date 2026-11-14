@@ -1,71 +1,95 @@
-# Causal-inference notebooks
+# Causal inference examples
+
+[Worker repository](https://github.com/Query-farm/vgi-causal) · [Shared tools and standard](https://github.com/Query-farm/vgi-example-notebooks)
 
 [Adjustment depends on what the model can see](01_adjustment_needs_the_confounders.ipynb)
-constructs a synthetic cohort with a known +3 treatment effect. Visible SQL fits
-propensity scores and three ATE estimators through the real worker, audits balance,
-and compares estimates with the planted effect. The experiment omits one confounder
-while preserving every observation.
+constructs a synthetic cohort with a known +3 effect, fits propensity scores and
+three ATE estimators through SQL, audits balance and reconstructs the ATT point
+estimate. The experiment omits one confounder while preserving every observation.
 
-## Run from this folder
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Query-farm/vgi-causal/blob/main/notebooks/01_adjustment_needs_the_confounders.ipynb)
 
-Prerequisites: [uv](https://docs.astral.sh/uv/), Git and network access for first-time
-package/extension installation. `uv` can provision Python. Copy this entire
-`notebooks/` folder anywhere; no worker checkout or root environment is required.
+The notebook includes the linked published worker title/subtitle, consistent
+Query Farm Strata Sun/VGI branding, saved SVG figures and visible connection SQL.
+GitHub displays code expanded; shared setup and presentation helpers keep the
+analytical cells prominent.
 
-```bash
-cd notebooks
-uv sync --frozen
-uv run --frozen python execute.py
+## Run locally or in Colab
+
+Open the Colab link and run all. Locally, from this directory:
+
+```sh
+uv sync --locked
+uv run --locked vgi-notebooks --timeout 300
 ```
 
-The locked notebook environment uses Haybarn 2.0.0rc11. The visible ATTACH runs
-published Git revision `9ec727d6f00fe00d105b89a5c2ac05e9bd4f5dc5` through `uvx`,
-Python 3.13 and SDK 0.51.1 in a separate worker runtime. To upgrade, change the
-literal Git/SDK pins and rerun the default and experiment before saving new outputs.
+Choose `.venv/bin/python` as an interactive kernel. Standalone setup installs only
+the shared base package and preserves compatible preloaded kernel/plot libraries.
+The local environment additionally includes the execution runner. The small
+presentation/input helper downloads from an immutable public revision with
+SHA-256 verification. No local worker checkout or copied execution script is needed.
 
-For an interactive kernel:
+The visible connection uses the public release and its own dependency declarations:
 
-```bash
-uv run --frozen python -m ipykernel install --user \
-  --name vgi-causal-notebooks --display-name 'Python (vgi-causal notebooks)'
+```sql
+ATTACH 'causal' (TYPE vgi,
+ LOCATION 'uvx --python 3.13 --from git+https://github.com/Query-farm/vgi-causal@v0.4.0 vgi-causal-worker');
 ```
 
-Open the notebook in your preferred Jupyter interface, select that kernel and use
-this folder as its working directory. Parameter and analytical SQL cells remain
-visible; setup, plotting and cleanup are folded.
+Initial setup requires internet access; uv provisions the separate Python/worker
+environment. Estimation runs locally without credentials, external datasets or
+API calls. The optional DoWhy backend is not installed or used.
 
 ## Simulation and interpretation
 
-All data are synthetic. A seeded NumPy generator supplies independent standard-normal
-covariates/noise and uniform assignment draws. SQL defines logistic treatment
-assignment from `x1` and `x2`, untreated outcome `2*x1 + 1.5*x2 + noise`, and a constant
-+3 treatment effect. The default cohort contains 4,000 subjects with seed 7.
-There is no external dataset, credential, live service or domain-specific outcome.
+A seeded NumPy generator supplies independent standard-normal covariates/noise
+and uniform assignment draws. Visible SQL defines logistic treatment assignment
+from x1/x2, untreated outcome `2*x1 + 1.5*x2 + noise`, and a constant +3 effect.
+The default contains4,000 synthetic subjects with seed7; none are real people.
 
-`ADJUST_FOR_X2` controls the visible SQL column projections passed to both worker
-models. IDs and simulation-only quantities never enter the ATE covariate set. The
-balance audit retains x2 even when the model omits it; that is possible because this
-is a simulation, not a genuinely unmeasured real-world variable.
+`ADJUST_FOR_X2` controls the relation projections passed to every estimator. IDs
+and simulation-only values never enter ATE/ATT covariates; propensity explicitly
+excludes its ID role. The audit retains x2 even when models omit it, possible
+because this is a simulation rather than an actually unmeasured variable.
 
-The notebook states no-unmeasured-confounding, positivity and consistency/no-interference
-assumptions. Fitted propensity clipping ensures finite weights but does not prove
-adequate overlap. Balance uses a fixed unweighted pooled within-arm standard deviation.
-Worker-reported 95% Wald intervals and the unadjusted normal approximation do not
-account for omitted-confounder bias. Agreement among estimators does not establish
-causal identification. All worker calls are materialized before local result capture.
+The notebook states no-unmeasured-confounding, positivity, and consistency/no-
+interference assumptions. Probability clipping makes weights finite but does not
+prove adequate overlap. Balance uses a fixed unweighted pooled within-arm SD.
+Worker95% Wald intervals and the unadjusted normal approximation do not account
+for omitted-confounder bias. Agreement among estimators does not establish
+identification.
 
-## Save the focused experiment separately
+The real `methods` view identifies each estimator's target and labels the ATE
+result table. ATT targets the treated population, using propensity odds on
+controls. SQL independently reconciles the worker's ATT point estimate; the
+reported standard error uses the worker's200 seeded row-bootstrap resamples with
+propensity refitting. The SQL check does not reproduce the bootstrap. True ATE
+and ATT equal3 here only because individual effects are constant; heterogeneous
+effects can give different target values.
 
-```bash
-uv run --frozen python execute.py --parameters '{"ADJUST_FOR_X2":false}' \
-  --output-dir validation/omit-x2
+Nine SQL invariants plus two ATT controls check population preservation, valid
+probabilities, weight concentration, interval ordering, native method labels and
+independent Hájek/ATT arithmetic. They do not require noisy estimates to equal
+truth or intervals to contain it.
+
+## Save the experiment separately
+
+```sh
+uv run --locked vgi-notebooks 01_adjustment_needs_the_confounders.ipynb \
+ --parameters '{"ADJUST_FOR_X2":false}' --output-dir artifacts/omit-x2
 ```
 
-Keep `N_SUBJECTS = 4000` and `SEED = 7`. Compare weighted balance, errors from the
-known effect and the effect plot; the unadjusted contrast should remain unchanged.
-Reset `ADJUST_FOR_X2 = True` afterward. Parameter ranges are checked before model calls.
+Keep `N_SUBJECTS=4000` and `SEED=7`. The cohort, planted effect and unadjusted
+contrast remain fixed while x2 balance, adjusted effects and ATT can change.
+Restore `ADJUST_FOR_X2=True`. Parameter types/ranges are checked before model calls.
 
-The runner uses a fresh temporary kernel, writes outputs only after successful
-execution and requires a separate destination for parameter overrides. Experiment
-folders include their branding and runtime companions. Logs, extracted charts and
-experiment copies are ignored; the main notebook retains successful embedded outputs.
+The shared runner requires separate override outputs and saves notebooks only
+after success. Defaults, the detached experiment, changed figures and one fresh
+preloaded-kernel bootstrap are checked; hosted Colab is not manually operated.
+Review PNGs and experiment copies are ignored; native SVG outputs and GitHub SVG
+assets are committed.
+
+[Coverage evidence](coverage.json) retains all four actual SQL surfaces and
+separates publicv0.4.0 execution from current-source compatibility. Current changes
+are metadata/examples; estimation, buffering, schemas and dependencies match.
+Existing green source CI is reused for these notebook-only changes.

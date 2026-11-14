@@ -186,7 +186,7 @@ the default path never pays its cost.
 
 ## Notebooks
 
-[Run the executed confounding walkthrough](notebooks/README.md) to compare a planted synthetic effect with adjusted estimates and inspect what changes when one confounder is omitted.
+[Run the executed confounding walkthrough](notebooks/README.md) to compare a planted synthetic effect with ATE/ATT estimates, audit weighting and inspect what changes when one confounder is omitted. Includes saved SVG figures and an Open in Colab link.
 
 ## Development
 

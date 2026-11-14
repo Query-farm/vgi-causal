@@ -1,0 +1,155 @@
+{
+  "schema_version": 1,
+  "notebook_sha256": "bc4b304c2e5ca5a5e11b6e5c0da763cce58394a3cc0dc6d3cbb8a7ac86531ee9",
+  "catalog_sha256": "e9738b7a80fb467fe50e0e884f029b684cf2a8fa027396603a052054e90e607d",
+  "worker_revision": "v0.4.0",
+  "status": "success",
+  "executed_at": "2026-11-14T22:10:01.291874+00:00",
+  "engine": "Haybarn2.0.0rc11 / public Causalv0.4.0 via release-owned uvx Python3.13",
+  "command": "uv run --locked vgi-notebooks --timeout 300",
+  "catalog_aliases": [
+    "causal"
+  ],
+  "cells": [
+    {
+      "id": "c6c7b489",
+      "status": "success",
+      "execution_count": 1,
+      "source_sha256": "c16990dd4ea62c42b96c8746cf2ea9396f0d9da40a9c192dbc15e75a26b36e2a",
+      "outputs_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "id": "install-tools",
+      "status": "success",
+      "execution_count": 2,
+      "source_sha256": "59096aa5c999a424e912d9ef7ee8d1c8d2cd28b66e2a81d9226123edec54a338",
+      "outputs_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "id": "1fc89cb8",
+      "status": "success",
+      "execution_count": 3,
+      "source_sha256": "2f69053c528e92c6ae9358aa7f7b9dc6a73e9bf5107dc4421300e4fc2041661e",
+      "outputs_sha256": "d00ed00d446f7d7849b971c220e06e7f0188a073005587fa3f32ea8175749205"
+    },
+    {
+      "id": "0d33b35a",
+      "status": "success",
+      "execution_count": 4,
+      "source_sha256": "ed73a0f26a51dc10c2c109aadbe7450cde40d08ea7688cb886fbf9e348aeea95",
+      "outputs_sha256": "c17c19a5c176854762c97c96bafef62f247262c382ecc6533cf998819c105960"
+    },
+    {
+      "id": "methods",
+      "status": "success",
+      "execution_count": 5,
+      "source_sha256": "eb5575396336041107ff41d686e638b9a95fd64d388c8a52f59c281f7fecde6d",
+      "outputs_sha256": "3bf1f40bb9d175cce4164d13c09259c17b933f54a31c28a8cf539a7976257bcf"
+    },
+    {
+      "id": "66cda90a",
+      "status": "success",
+      "execution_count": 6,
+      "source_sha256": "d74108be0e94e6ea2aaf93e4c3b7c015c946ad244e82f4b8e176abeba021801f",
+      "outputs_sha256": "217155a9fa88c4b6aeeda3f8652f242d341cb7159d29d5e4fa1c0d343284800d"
+    },
+    {
+      "id": "984aa9d2",
+      "status": "success",
+      "execution_count": 7,
+      "source_sha256": "7095e0b0b53dabfa7e47135fc9eb044f670af4251bd4fccf912d602873b2de69",
+      "outputs_sha256": "d06f9e603dc8468f2c30077649d0067cf99f871446c7262f3acf8fc62e14aa6a"
+    },
+    {
+      "id": "ebc4eb7c",
+      "status": "success",
+      "execution_count": 8,
+      "source_sha256": "88e735a347f928a8a99f1085fd43b55885cd6e7914f2201cd01234b17e0a207a",
+      "outputs_sha256": "38d65c95b6f8948c53f86346461732bbbe5875fc33d3931010a57e4e6e24a968"
+    },
+    {
+      "id": "35907922",
+      "status": "success",
+      "execution_count": 9,
+      "source_sha256": "2794064801cfc6add1b8dbafa092a36479537b0912359cb5868e4b342d74a7ac",
+      "outputs_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "id": "1ac4d87d",
+      "status": "success",
+      "execution_count": 10,
+      "source_sha256": "41966bb766240130d53c2f76fc6c1ee6ecc7f691f6288c5f14bcd9fb7da11210",
+      "outputs_sha256": "a9cf5efbbbe3ef6febc0a4a1816aaae5a26c49f78b29778f35a6a5b89409916d"
+    },
+    {
+      "id": "c6ebdefb",
+      "status": "success",
+      "execution_count": 11,
+      "source_sha256": "25d6d35c681324eeec42ea4c68552b52b0749cf58a084517c97c10f56087b2b5",
+      "outputs_sha256": "b9a60079cc33ba4083adfb55296c209ca724dbcb3d826bc74be02c68f2ba9135"
+    },
+    {
+      "id": "ab39e7fd",
+      "status": "success",
+      "execution_count": 12,
+      "source_sha256": "aff2cb931fcab4aea666ec91d3b28b4df57d57d18720d3cf2521fe9d6dfcf521",
+      "outputs_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "id": "7113ec4d",
+      "status": "success",
+      "execution_count": 13,
+      "source_sha256": "9c8daae929d8f629e88d25f815f977b80786495f47aa15d9cab67b234fce73e9",
+      "outputs_sha256": "cf657939b560d88b03b810b37c8b05eec52ba3fdf7f0998ec17243481d29c4aa"
+    },
+    {
+      "id": "79ec2f5e",
+      "status": "success",
+      "execution_count": 14,
+      "source_sha256": "22424ebe2ca8aaf460adbd8409c91f68fe9fbeda3525d3d7f49f923fe9a9b426",
+      "outputs_sha256": "77f7df0a7f740ff1b0aa614e64b1adc96f7627423f05cbd6b99e0bd5d3c70375"
+    },
+    {
+      "id": "2b74da5f",
+      "status": "success",
+      "execution_count": 15,
+      "source_sha256": "942bc7357d35ebc86b4785c77c80efe30498b0b5b57959f71fd85612f2a78880",
+      "outputs_sha256": "aa72a8b5901c90117d789f8362f4955e213767a548a6f1998d6928c6e8959b1f"
+    },
+    {
+      "id": "att-fit",
+      "status": "success",
+      "execution_count": 16,
+      "source_sha256": "a95206428bd0f804b9e9de52923c287b2f5cf588f8354901ea640184040638b6",
+      "outputs_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "id": "att-result",
+      "status": "success",
+      "execution_count": 17,
+      "source_sha256": "7b2777b6840049d5f1df9d8b07243e96cb5bb7a46629b6d570516750c95d724d",
+      "outputs_sha256": "6e84ecf8aa8578100ac384e4ee9fc37e16ca954bd6a76490e948337c8ffde499"
+    },
+    {
+      "id": "69f2c96f",
+      "status": "success",
+      "execution_count": 18,
+      "source_sha256": "0701d2618ac9ddcc41802dd517fdfd17c9aa52413584e285ae529d3c53026191",
+      "outputs_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "id": "93725133",
+      "status": "success",
+      "execution_count": 19,
+      "source_sha256": "b97e7a1241796ae5ad04f7c181faef174e7739f9dc68783e702b204f9cf865e9",
+      "outputs_sha256": "42df59734ebd863ddeaed74f451f6c4ebface086ef7df70c9e5802e8a8703bc9"
+    },
+    {
+      "id": "23f13943",
+      "status": "success",
+      "execution_count": 20,
+      "source_sha256": "94233b5be70370b0d42e726cb71b70449a140acdb522b4667aeef593a25b706a",
+      "outputs_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    }
+  ]
+}
