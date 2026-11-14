@@ -79,15 +79,15 @@ _ATT_SCHEMA = pa.schema(
 # vgi.example_queries in vgi_causal.worker.
 
 #: ate joined to the methods reference view: every ATE estimator annotated with
-#: its estimand and doubly-robust flag.
+#: its doubly-robust flag and one-line summary.
 COMPOSED_ATE_WITH_METHODS: dict[str, str] = {
     "description": (
-        "Each ATE estimator's estimate and 95% CI, annotated with its estimand and doubly-robust "
-        "flag from the methods reference view (doubly-robust AIPW first)."
+        "Each ATE estimator's estimate and 95% CI next to its doubly-robust flag and one-line "
+        "summary from the methods reference view (doubly-robust AIPW first)."
     ),
     "sql": (
-        COHORT_CTE + "SELECT e.method, m.estimand, m.doubly_robust, round(e.estimate, 2) AS estimate, "
-        "round(e.ci_lower, 2) AS ci_lower, round(e.ci_upper, 2) AS ci_upper "
+        COHORT_CTE + "SELECT e.method, m.doubly_robust, round(e.estimate, 2) AS estimate, "
+        "round(e.ci_lower, 2) AS ci_lower, round(e.ci_upper, 2) AS ci_upper, m.description "
         "FROM causal.main.ate((SELECT t, y, x FROM cohort), treatment := 't', outcome := 'y') AS e "
         "JOIN causal.main.methods AS m ON m.method = e.method AND m.function_name = 'ate' "
         "ORDER BY m.doubly_robust DESC, e.method"
