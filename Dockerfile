@@ -6,7 +6,7 @@
 # See docker-entrypoint.sh. Causal estimation runs locally (scikit-learn + statsmodels);
 # no credentials or network access are required.
 # syntax=docker/dockerfile:1
-FROM python:3.13-slim
+FROM python:3.14-slim
 
 ARG VERSION=0.0.0
 ARG GIT_COMMIT=unknown
