@@ -17,7 +17,7 @@ propensity scores — backed by [scikit-learn](https://scikit-learn.org/) and
 
 ```sql
 INSTALL vgi FROM community; LOAD vgi;
-ATTACH 'causal' (TYPE vgi, LOCATION 'uvx --from git+https://github.com/Query-farm/vgi-causal@v0.4.1 vgi-causal-worker');
+ATTACH 'causal' (TYPE vgi, LOCATION 'uvx --from git+https://github.com/Query-farm/vgi-causal@v0.4.2 vgi-causal-worker');
 
 -- Average Treatment Effect: one row per estimator (ipw, regression_adjustment, aipw)
 SELECT * FROM causal.ate((SELECT * FROM cohort),
@@ -41,7 +41,7 @@ The worker isn't on PyPI; [uv](https://docs.astral.sh/uv/) runs it straight from
 INSTALL vgi FROM community;
 LOAD vgi;
 
-ATTACH 'causal' AS causal (TYPE vgi, LOCATION 'uvx --from git+https://github.com/Query-farm/vgi-causal@v0.4.1 vgi-causal-worker');
+ATTACH 'causal' AS causal (TYPE vgi, LOCATION 'uvx --from git+https://github.com/Query-farm/vgi-causal@v0.4.2 vgi-causal-worker');
 
 -- Average treatment effect by IPW, regression adjustment, and doubly-robust AIPW.
 WITH cohort AS (
@@ -89,14 +89,14 @@ FROM causal.main.ate((SELECT c.t, c.y, c.x FROM cohort AS c JOIN ps USING (id)
 ORDER BY method;
 ```
 
-Change `@v0.4.0` to move to a newer release.
+Change `@v0.4.2` to move to a newer release.
 
 ### Other ways to run it
 
 - **Docker** (the image bundles the worker and its dependencies):
 
   ```sql
-  ATTACH 'causal' AS causal (TYPE vgi, LOCATION 'docker://ghcr.io/query-farm/vgi-causal:0.4.0');
+  ATTACH 'causal' AS causal (TYPE vgi, LOCATION 'docker://ghcr.io/query-farm/vgi-causal:0.4.2');
   ```
 
 - **From a local checkout** (`git clone https://github.com/Query-farm/vgi-causal`), point `LOCATION` at `uv run --project /path/to/vgi-causal vgi-causal-worker`.
