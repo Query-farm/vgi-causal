@@ -17,7 +17,7 @@ propensity scores — backed by [scikit-learn](https://scikit-learn.org/) and
 
 ```sql
 INSTALL vgi FROM community; LOAD vgi;
-ATTACH 'causal' (TYPE vgi, LOCATION 'uvx --from git+https://github.com/Query-farm/vgi-causal@v0.4.0 vgi-causal-worker');
+ATTACH 'causal' (TYPE vgi, LOCATION 'uvx --from git+https://github.com/Query-farm/vgi-causal@v0.4.1 vgi-causal-worker');
 
 -- Average Treatment Effect: one row per estimator (ipw, regression_adjustment, aipw)
 SELECT * FROM causal.ate((SELECT * FROM cohort),
@@ -41,7 +41,7 @@ The worker isn't on PyPI; [uv](https://docs.astral.sh/uv/) runs it straight from
 INSTALL vgi FROM community;
 LOAD vgi;
 
-ATTACH 'causal' AS causal (TYPE vgi, LOCATION 'uvx --from git+https://github.com/Query-farm/vgi-causal@v0.4.0 vgi-causal-worker');
+ATTACH 'causal' AS causal (TYPE vgi, LOCATION 'uvx --from git+https://github.com/Query-farm/vgi-causal@v0.4.1 vgi-causal-worker');
 
 -- Average treatment effect by IPW, regression adjustment, and doubly-robust AIPW.
 WITH cohort AS (
